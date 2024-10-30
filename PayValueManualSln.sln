@@ -1,0 +1,62 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.34018.315
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "APi", "APi", "{D83FE2EA-C5A2-4DCB-A043-4413C647269B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{9FCF94DF-448E-4EA8-9A3E-E8EE7A0E939F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Infrastructure", "Infrastructure", "{65EEAC7F-1A3F-4DEC-AAC4-244AB1834105}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PayValueManualSln.Application", "PayValueManualSln.Application\PayValueManualSln.Application.csproj", "{F227EFB0-6F13-4904-B60B-23D8EA493AE5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PayValueManualSln.Domain", "PayValueManualSln.Domain\PayValueManualSln.Domain.csproj", "{4FC4EDB9-7C26-4DAB-B111-4C6173C622A1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PayValueManualSln.Persistence", "PayValueManualSln.Persistence\PayValueManualSln.Persistence.csproj", "{06181338-9F4A-44B8-92D4-2A6606401172}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PayValueManualSln.Shared", "PayValueManualSln.Shared\PayValueManualSln.Shared.csproj", "{B2546D13-F895-4277-8CA1-6E2105240E64}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PayValueManualSln.Api", "PayValueManualSln.Api\PayValueManualSln.Api.csproj", "{E1014366-C34B-4200-BCE8-9EC8C7CA2176}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F227EFB0-6F13-4904-B60B-23D8EA493AE5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F227EFB0-6F13-4904-B60B-23D8EA493AE5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F227EFB0-6F13-4904-B60B-23D8EA493AE5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F227EFB0-6F13-4904-B60B-23D8EA493AE5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4FC4EDB9-7C26-4DAB-B111-4C6173C622A1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4FC4EDB9-7C26-4DAB-B111-4C6173C622A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4FC4EDB9-7C26-4DAB-B111-4C6173C622A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4FC4EDB9-7C26-4DAB-B111-4C6173C622A1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{06181338-9F4A-44B8-92D4-2A6606401172}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{06181338-9F4A-44B8-92D4-2A6606401172}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{06181338-9F4A-44B8-92D4-2A6606401172}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{06181338-9F4A-44B8-92D4-2A6606401172}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B2546D13-F895-4277-8CA1-6E2105240E64}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2546D13-F895-4277-8CA1-6E2105240E64}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2546D13-F895-4277-8CA1-6E2105240E64}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2546D13-F895-4277-8CA1-6E2105240E64}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E1014366-C34B-4200-BCE8-9EC8C7CA2176}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E1014366-C34B-4200-BCE8-9EC8C7CA2176}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E1014366-C34B-4200-BCE8-9EC8C7CA2176}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E1014366-C34B-4200-BCE8-9EC8C7CA2176}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F227EFB0-6F13-4904-B60B-23D8EA493AE5} = {9FCF94DF-448E-4EA8-9A3E-E8EE7A0E939F}
+		{4FC4EDB9-7C26-4DAB-B111-4C6173C622A1} = {9FCF94DF-448E-4EA8-9A3E-E8EE7A0E939F}
+		{06181338-9F4A-44B8-92D4-2A6606401172} = {65EEAC7F-1A3F-4DEC-AAC4-244AB1834105}
+		{B2546D13-F895-4277-8CA1-6E2105240E64} = {65EEAC7F-1A3F-4DEC-AAC4-244AB1834105}
+		{E1014366-C34B-4200-BCE8-9EC8C7CA2176} = {D83FE2EA-C5A2-4DCB-A043-4413C647269B}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {44633F19-3285-408C-AB00-BDC6999A6303}
+	EndGlobalSection
+EndGlobal
