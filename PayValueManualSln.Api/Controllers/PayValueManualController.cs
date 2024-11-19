@@ -16,7 +16,7 @@ namespace PayValueManualSln.Api.Controllers
 		{
 			_entityManager = entityManager;
 		}
-		[HttpGet("get-services")]
+		[HttpGet("get-service")]
 		public async Task<IActionResult> GetServices(DataSourceLoadOptions loadOptions)
 		{
 			var responseList = new List<ServicesDto>();
