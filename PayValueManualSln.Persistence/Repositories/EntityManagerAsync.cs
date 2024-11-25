@@ -4,6 +4,7 @@ using PayValueManualSln.Application.Interfaces;
 using PayValueManualSln.Application.Wrappers;
 using PayValueManualSln.Infrastructure.Persistence.Contexts;
 using PayValueV2.Domain.Entities.PayValue;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,10 +17,13 @@ namespace PayValueManualSln.Persistence.Repositories
 	public class EntityMangerAsync : IEntityManager
 	{
 		private readonly ApplicationDbContext _context;
-		public EntityMangerAsync(ApplicationDbContext context)
+		private readonly ILogger _logger;
+		public EntityMangerAsync(ApplicationDbContext context, ILogger logger)
 		{
 			_context = context;
+			_logger = logger;
 		}
+
 
 		public async Task<Response<List<ServicesDto>>> GetServicesAsync()
 		{
@@ -27,14 +31,13 @@ namespace PayValueManualSln.Persistence.Repositories
 			try
 			{
 				var result = await _context.Services
-				.Where(a => a.Name != null)
-				.OrderByDescending(c => c.CreatedOn)
-				.Select(x => new ServicesDto
-				{
-					Name = x.Name ?? string.Empty, 
-													
-				})
-				.ToListAsync();
+					.Where(a => !string.IsNullOrEmpty(a.Name))
+					.OrderByDescending(c => c.CreatedOn)
+					.Select(x => new ServicesDto
+					{
+						Name = x.Name ?? string.Empty,
+					})
+					.ToListAsync();
 
 				response.Data = result.Select(s => new ServicesDto
 				{
@@ -46,26 +49,26 @@ namespace PayValueManualSln.Persistence.Repositories
 			}
 			catch (Exception ex)
 			{
-
+				Log.Error(ex, "An error occurred in GetServicesAsync.");
 				response.Succeeded = false;
 				response.Message = $"An error occurred: {ex.Message}";
 			}
 			return response;
 		}
+
 		public async Task<Response<List<RevenueDto>>> GetRevenueAsync()
 		{
 			var response = new Response<List<RevenueDto>>();
 			try
 			{
 				var result = await _context.Services
-				.Where(a => a.Name != null)
-				.OrderByDescending(c => c.CreatedOn)
-				.Select(x => new RevenueDto
-				{
-					RevenueName = x.Name ?? string.Empty,
-
-				})
-				.ToListAsync();
+					.Where(a => !string.IsNullOrEmpty(a.Name))
+					.OrderByDescending(c => c.CreatedOn)
+					.Select(x => new RevenueDto
+					{
+						RevenueName = x.Name ?? string.Empty,
+					})
+					.ToListAsync();
 
 				response.Data = result.Select(s => new RevenueDto
 				{
@@ -77,19 +80,18 @@ namespace PayValueManualSln.Persistence.Repositories
 			}
 			catch (Exception ex)
 			{
-
+				Log.Error(ex, "An error occurred in GetRevenueAsync.");
 				response.Succeeded = false;
 				response.Message = $"An error occurred: {ex.Message}";
 			}
 			return response;
 		}
+
 		public async Task<ResponseDto> InsertAssessmentDataToBillTablesAsync(int assessmentId)
 		{
 			var response = new ResponseDto();
-
 			try
 			{
-				// Retrieve the assessment data by ID
 				var assessment = await _context.Assessment.FindAsync(assessmentId);
 				if (assessment == null)
 				{
@@ -98,7 +100,6 @@ namespace PayValueManualSln.Persistence.Repositories
 					return response;
 				}
 
-				// Create and populate BillInfo object
 				var billInfo = new BillInfo
 				{
 					PayerName = assessment.PayerName,
@@ -114,13 +115,10 @@ namespace PayValueManualSln.Persistence.Repositories
 					ReversedBy = assessment.Reversedby,
 					ReversedOn = assessment.DateReversed,
 					IsExpired = assessment.IsExpired
-					// Add other fields as needed
 				};
 
-				// Add BillInfo to the database context
 				await _context.BillInfo.AddAsync(billInfo);
 
-				// Create and populate BillDetails object
 				var billDetails = new BillDetails
 				{
 					RevenueCode = assessment.RevenueCode,
@@ -132,14 +130,11 @@ namespace PayValueManualSln.Persistence.Repositories
 					Liability = assessment.AssessmentBalance,
 					PartPaymentAllow = assessment.PartPaymentAllow,
 					CreatedById = assessment.AssessmentCreatedBy,
-					IsReversed = assessment.IsReversed,
-					// Add other fields as needed
+					IsReversed = assessment.IsReversed
 				};
 
-				// Add BillDetails to the database context
 				await _context.BillDetails.AddAsync(billDetails);
 
-				// Save changes to the database
 				await _context.SaveChangesAsync();
 
 				response.Succeeded = true;
@@ -147,13 +142,14 @@ namespace PayValueManualSln.Persistence.Repositories
 			}
 			catch (Exception ex)
 			{
+				Log.Error(ex, "An error occurred in InsertAssessmentDataToBillTablesAsync.");
 				response.Succeeded = false;
 				response.Message = $"An error occurred: {ex.Message}";
-				// Log the exception details as necessary
 			}
-				
+
 			return response;
 		}
+
 
 
 	}

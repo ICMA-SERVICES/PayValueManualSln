@@ -1,14 +1,32 @@
 using PayValueManualSln.Infrastructure.Persistence;
 using PayValueManualSln.Infrastructure.Shared;
 using PayValueManualSln.Core.Application;
+using Serilog;
+
 namespace PayValueManualSln.Api
 {
 	public class Program
 	{
 		public static void Main(string[] args)
 		{
-			var builder = WebApplication.CreateBuilder(args);
 
+			var builder = WebApplication.CreateBuilder(args);
+			
+			
+				Log.Logger = new LoggerConfiguration()
+					.WriteTo.Console()
+					.CreateBootstrapLogger();
+
+				Log.Information("PayValueManual API starting..");
+
+				builder.Host.UseSerilog((context, loggerConfiguration) =>
+				{
+					loggerConfiguration
+					 .WriteTo.Console()
+					 .ReadFrom.Configuration(context.Configuration);
+				});
+			
+			
 			// Add services to the container.
 
 			builder.Services.AddControllers();
@@ -19,9 +37,7 @@ namespace PayValueManualSln.Api
 			// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 			builder.Services.AddEndpointsApiExplorer();
 			builder.Services.AddSwaggerGen();
-
 			var app = builder.Build();
-
 			// Configure the HTTP request pipeline.
 			if (app.Environment.IsDevelopment())
 			{
@@ -35,6 +51,7 @@ namespace PayValueManualSln.Api
 
 
 			app.MapControllers();
+			app.UseSerilogRequestLogging();
 
 			app.Run();
 		}
