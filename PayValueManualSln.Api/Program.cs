@@ -52,7 +52,7 @@ namespace PayValueManualSln.Api
 			//{
 				app.UseSwagger();
 				app.UseSwaggerUI();
-			}
+			//}
 			app.UseCors(x => x
 			 .SetIsOriginAllowed(origin => true)
 			 .AllowAnyMethod()
