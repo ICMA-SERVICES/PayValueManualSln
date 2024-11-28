@@ -11,9 +11,18 @@ namespace PayValueManualSln.Api
 		{
 
 			var builder = WebApplication.CreateBuilder(args);
-			
-			
-				Log.Logger = new LoggerConfiguration()
+			builder.Services.AddCors(options =>
+			{
+				options.AddPolicy("Open", builder =>
+				{
+					builder.AllowAnyOrigin();
+					builder.AllowAnyHeader();
+					builder.AllowAnyMethod();
+
+				});
+			});
+
+			Log.Logger = new LoggerConfiguration()
 					.WriteTo.Console()
 					.CreateBootstrapLogger();
 
@@ -43,6 +52,12 @@ namespace PayValueManualSln.Api
 			//{
 				app.UseSwagger();
 				app.UseSwaggerUI();
+			}
+			app.UseCors(x => x
+			 .SetIsOriginAllowed(origin => true)
+			 .AllowAnyMethod()
+			 .AllowAnyHeader()
+			 .AllowCredentials());
 			//}
 
 			app.UseHttpsRedirection();
