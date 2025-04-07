@@ -18,8 +18,12 @@ namespace PayValueManualSln.Infrastructure.Persistence.Contexts
 	public partial class ApplicationDbContext : DbContext
 	{
 		private readonly IDateTimeService _dateTime;
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+       : base(options)
+        {
+        }
 
-		public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IDateTimeService dateTime) : base(options)
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IDateTimeService dateTime) : base(options)
 		{
 			//ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
 			_dateTime = dateTime;
