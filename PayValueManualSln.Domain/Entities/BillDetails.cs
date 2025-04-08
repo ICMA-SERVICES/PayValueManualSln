@@ -31,7 +31,7 @@ namespace PayValueV2.Domain.Entities.PayValue
 		public decimal? RebateAmount { get; set; } = 0;
 		public Guid? RebateRequestId { get; set; }
 		public bool? ShowRebateAmount { get; set; }
-		public string? TotalBillAmount { get; set; }
+		public decimal? TotalBillAmount { get; set; }
 		public decimal BillAmountPaid { get; set; }
 		[DatabaseGenerated(DatabaseGeneratedOption.Computed)]
 		public decimal? BillBalance { get; set; } = 0;

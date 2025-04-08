@@ -22,7 +22,7 @@ namespace PayValueV2.Domain.Entities.PayValue
 		public string? Email { get; set; }
 		public string? Telephone { get; set; }
 		public string? Address { get; set; }
-		public decimal TotalAssessed { get; set; }
+		public decimal? TotalAssessed { get; set; }
 		public decimal Liability { get; set; }
 		public decimal? TotalBillAmount { get; set; }
 		public decimal? AmountPaid { get; set; }
