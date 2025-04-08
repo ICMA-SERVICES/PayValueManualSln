@@ -38,7 +38,7 @@ namespace PayValueManualSln.Domain.Entities
 		public string Address { get; set; }
 		public decimal? Amount { get; set; }
 		public decimal? Arrears { get; set; }
-		public string? TotalAmount { get; set; }
+		public decimal TotalAmount { get; set; }
 		[MaxLength]
 		public string Narration { get; set; }
 		[MaxLength(100)]

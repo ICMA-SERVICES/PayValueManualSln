@@ -49,11 +49,11 @@ namespace PayValueManualSln.Infrastructure.Persistence.Contexts
 
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
-			//All Decimals will have 18,2 Range
+            //All Decimals will have 18,2 Range
 
+            
 
-
-			modelBuilder.Entity<Revenue>(entity =>
+            modelBuilder.Entity<Revenue>(entity =>
 			{
 				entity.ToTable("Revenue", "dbo");
 				entity.HasKey(e => e.Id);
