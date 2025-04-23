@@ -13,7 +13,9 @@ namespace PayValueManualSln.Application.Interfaces
 		Task<Response<List<ServicesDto>>> GetServicesAsync();
 		Task<Response<List<RevenueDto>>> GetRevenueAsync();
 		Task<ResponseDto> InsertAssessmentDataToBillTablesAsync(int assessmentId);
-		
+        Task<Response<PayerCollectionResponse>> GetAssessmentDetailAsync(string searchParam);
+        Task<Response<PayerCollectionResponse>> ApprovePayerDetailAsync(UpdatePayerRequest request);
 
-	}
+
+    }
 }

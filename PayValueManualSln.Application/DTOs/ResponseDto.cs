@@ -12,7 +12,7 @@ namespace PayValueManualSln.Application.DTOs
 		public string Message { get; set; }
 		public object Data { get; set; } 
 
-	
+		
 		public ResponseDto(bool succeeded = true, string message = "", object data = null)
 		{
 			Succeeded = succeeded;

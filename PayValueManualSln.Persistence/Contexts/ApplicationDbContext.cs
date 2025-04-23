@@ -34,8 +34,9 @@ namespace PayValueManualSln.Infrastructure.Persistence.Contexts
 		public virtual DbSet<BillDetails> BillDetails { get; set; }
 		public virtual DbSet<BillInfo> BillInfo { get; set; }
 		public virtual DbSet<Assessment> Assessment { get; set; }
+        public virtual DbSet<PayerDetails> PayerDetails { get; set; }
 
-		protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 		{
 			optionsBuilder.EnableDetailedErrors(true);
 			optionsBuilder.AddInterceptors(new MyCommandInterceptor());
