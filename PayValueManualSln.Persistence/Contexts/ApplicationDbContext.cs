@@ -35,6 +35,7 @@ namespace PayValueManualSln.Infrastructure.Persistence.Contexts
 		public virtual DbSet<BillInfo> BillInfo { get; set; }
 		public virtual DbSet<Assessment> Assessment { get; set; }
         public virtual DbSet<PayerDetails> PayerDetails { get; set; }
+        public virtual DbSet<AdditionalServiceDetail> AdditionalServiceDetail { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 		{

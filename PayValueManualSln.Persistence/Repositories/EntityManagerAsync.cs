@@ -6,6 +6,7 @@ using PayValueManualSln.Application.DTOs;
 using PayValueManualSln.Application.Enums;
 using PayValueManualSln.Application.Interfaces;
 using PayValueManualSln.Application.Wrappers;
+using PayValueManualSln.Domain.Entities;
 using PayValueManualSln.Infrastructure.Persistence.Contexts;
 using PayValueV2.Domain.Entities.PayValue;
 using Serilog;
@@ -25,13 +26,16 @@ namespace PayValueManualSln.Persistence.Repositories
 		private readonly IConfiguration _config;
 		private readonly IHttpClientHelperService _httpClientHelperService;
 		private readonly IMapper _mapper;
-        public EntityMangerAsync(ApplicationDbContext context, ILogger logger, IConfiguration config, IHttpClientHelperService httpClientHelperService,IMapper mapper)
+        private readonly IAuthenticatedUserService _authenticatedUser;
+
+        public EntityMangerAsync(ApplicationDbContext context, ILogger logger, IConfiguration config, IHttpClientHelperService httpClientHelperService,IMapper mapper,IAuthenticatedUserService authenticatedUserService)
         {
             _context = context;
             _logger = logger;
             _config = config;
             _httpClientHelperService = httpClientHelperService;
 			_mapper = mapper;
+            _authenticatedUser = authenticatedUserService;
         }
 
 
@@ -270,7 +274,47 @@ namespace PayValueManualSln.Persistence.Repositories
             }
 			return response;
         }
-		
+		public async Task<Response<bool>> SendPayerDetialToAdminAsync(UpdatePayerRequest request)
+		{
+			var response = new Response<bool>();
+			try
+			{
+              var mapper = _mapper.Map<PayerDetails>(request);
+				mapper.ActedUponOn = DateTime.Now;
+                mapper.ChangeRequesterId = _authenticatedUser.UserId;
+				await _context.PayerDetails.AddAsync(mapper);
+				var result = await _context.SaveChangesAsync();
+                response.Message = result > 0
+				? "Successful"
+				: "UnSuccessful";
+                response.Succeeded = result > 0;
+
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "An error occurred in SendPayerDetialToAdminAsync.");
+                response.Succeeded = false;
+                response.Message = $"An error occurred: {ex.Message}";
+            }
+            return response;
+        }
+		public async Task<Response<List<AdditionalServiceDetailDto>>> GetAdditionalServiceDetail()
+		{
+			var response = new Response<List<AdditionalServiceDetailDto>>();
+			try
+			{
+                var list = await _context.AdditionalServiceDetail.ToListAsync();
+                response.Message = (list != null && list.Any()) ? "Successful" : "Unsuccessful";
+                response.Succeeded = list != null && list.Any();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "An error occurred in GetAdditionalServiceDetail.");
+                response.Succeeded = false;
+                response.Message = $"An error occurred: {ex.Message}";
+            }
+			return response;
+        }
 
 
 

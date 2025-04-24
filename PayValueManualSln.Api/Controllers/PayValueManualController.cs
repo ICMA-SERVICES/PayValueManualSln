@@ -103,5 +103,37 @@ namespace PayValueManualSln.Api.Controllers
             return Ok(result);
         }
 
+        [HttpPost("send-payer-detail-to-admin")]
+		public async Task<IActionResult> SendPayerDetailToAdmin([FromBody] UpdatePayerRequest request)
+		{
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            var result = await _entityManager.SendPayerDetialToAdminAsync(request);
+            return Ok(result);
+        }
+		[HttpGet("get-additional-service-detail")]
+        public async Task<IActionResult> GetAdditionalServiceDetail(DataSourceLoadOptions loadOptions)
+        {
+            var responseList = new List<AdditionalServiceDetailDto>();
+            var response = await _entityManager.GetAdditionalServiceDetail();
+            if (response.Succeeded)
+            {
+                responseList = response.Data;
+                loadOptions.PrimaryKey = new[] { $"AdditionalServiceDetailName" };
+                var test = DataSourceLoader.Load(responseList, loadOptions);
+                if (test.data != null)
+                {
+                    return Ok(test);
+                }
+                return Ok(new { ResonseList = test, SearchResult = response });
+            }
+            else
+            {
+                return BadRequest(response);
+            }
+            ;
+        }
     }
 }
