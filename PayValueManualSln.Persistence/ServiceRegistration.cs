@@ -19,6 +19,7 @@ namespace PayValueManualSln.Infrastructure.Persistence
 			services.AddTransient(typeof(IGenericRepositoryAsync<>), typeof(GenericRepositoryAsync<>));
 			#endregion
 			services.AddScoped<IEntityManager, EntityMangerAsync>();
+
 		}
 	}
 }

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using PayValueManualSln.Application.DTOs;
 using PayValueManualSln.Application.Helpers;
 using PayValueManualSln.Application.Interfaces;
+using System.Xml.Linq;
 
 namespace PayValueManualSln.Api.Controllers
 {
@@ -60,8 +61,28 @@ namespace PayValueManualSln.Api.Controllers
 				return BadRequest(response);
 			};
 		}
+        [HttpGet("get-assessment-detail")]
+        public async Task<IActionResult> GetAssessmentDetail(DataSourceLoadOptions loadOptions,string searchParameter)
+        {
+            var responseList = new List<PayerCollectionDetail>();
+            var searchResult = await _entityManager.GetAssessmentDetailAsync(searchParameter);
+            if (searchResult.Succeeded)
+            {
+                responseList = searchResult.Data.payerCollectionDetails;
+                var test = DataSourceLoader.Load(responseList, loadOptions);
+                if (test.data != null)
+                {
+                    return Ok(test);
+                }
+                return Ok(new { ResonseList = test, SearchResult = searchResult });
+            }
+            else
+            {
+                return BadRequest(searchResult);
+            }
+        }
 
-		[HttpPost("create-bill-from-assessment")]
+        [HttpPost("create-bill-from-assessment")]
 		public async Task<IActionResult> CreateBillFromAssessment(int assessmentId, [FromBody] AssesmentDto requeset)
 		{
 			if (!ModelState.IsValid)
@@ -71,6 +92,48 @@ namespace PayValueManualSln.Api.Controllers
 			var result = _entityManager.InsertAssessmentDataToBillTablesAsync(assessmentId);
 			return Ok(result);
 		}
+		[HttpPost("approve-payer-detail")]
+        public async Task<IActionResult> ApprovePayerDetail([FromBody] UpdatePayerRequest request)
+		{
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            var result = await _entityManager.ApprovePayerDetailAsync(request);
+            return Ok(result);
+        }
 
-		}
+        [HttpPost("send-payer-detail-to-admin")]
+		public async Task<IActionResult> SendPayerDetailToAdmin([FromBody] UpdatePayerRequest request)
+		{
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            var result = await _entityManager.SendPayerDetialToAdminAsync(request);
+            return Ok(result);
+        }
+		[HttpGet("get-additional-service-detail")]
+        public async Task<IActionResult> GetAdditionalServiceDetail(DataSourceLoadOptions loadOptions)
+        {
+            var responseList = new List<AdditionalServiceDetailDto>();
+            var response = await _entityManager.GetAdditionalServiceDetail();
+            if (response.Succeeded)
+            {
+                responseList = response.Data;
+                loadOptions.PrimaryKey = new[] { $"AdditionalServiceDetailName" };
+                var test = DataSourceLoader.Load(responseList, loadOptions);
+                if (test.data != null)
+                {
+                    return Ok(test);
+                }
+                return Ok(new { ResonseList = test, SearchResult = response });
+            }
+            else
+            {
+                return BadRequest(response);
+            }
+            ;
+        }
+    }
 }

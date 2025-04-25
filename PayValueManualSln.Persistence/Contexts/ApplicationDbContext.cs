@@ -18,8 +18,12 @@ namespace PayValueManualSln.Infrastructure.Persistence.Contexts
 	public partial class ApplicationDbContext : DbContext
 	{
 		private readonly IDateTimeService _dateTime;
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+       : base(options)
+        {
+        }
 
-		public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IDateTimeService dateTime) : base(options)
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IDateTimeService dateTime) : base(options)
 		{
 			//ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
 			_dateTime = dateTime;
@@ -30,8 +34,10 @@ namespace PayValueManualSln.Infrastructure.Persistence.Contexts
 		public virtual DbSet<BillDetails> BillDetails { get; set; }
 		public virtual DbSet<BillInfo> BillInfo { get; set; }
 		public virtual DbSet<Assessment> Assessment { get; set; }
+        public virtual DbSet<PayerDetails> PayerDetails { get; set; }
+        public virtual DbSet<AdditionalServiceDetail> AdditionalServiceDetail { get; set; }
 
-		protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 		{
 			optionsBuilder.EnableDetailedErrors(true);
 			optionsBuilder.AddInterceptors(new MyCommandInterceptor());
@@ -45,11 +51,11 @@ namespace PayValueManualSln.Infrastructure.Persistence.Contexts
 
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
-			//All Decimals will have 18,2 Range
+            //All Decimals will have 18,2 Range
 
+            
 
-
-			modelBuilder.Entity<Revenue>(entity =>
+            modelBuilder.Entity<Revenue>(entity =>
 			{
 				entity.ToTable("Revenue", "dbo");
 				entity.HasKey(e => e.Id);

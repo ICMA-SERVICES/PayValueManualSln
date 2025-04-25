@@ -38,7 +38,7 @@ namespace PayValueManualSln.Domain.Entities
 		public string Address { get; set; }
 		public decimal? Amount { get; set; }
 		public decimal? Arrears { get; set; }
-		public string? TotalAmount { get; set; }
+		public decimal? TotalAmount { get; set; }
 		[MaxLength]
 		public string Narration { get; set; }
 		[MaxLength(100)]
@@ -51,14 +51,14 @@ namespace PayValueManualSln.Domain.Entities
 		public string AgencyName { get; set; }
 		[MaxLength(50)]
 		public string Platformcode { get; set; }
-		public string? AmountPaid { get; set; }
+		public decimal? AmountPaid { get; set; }
 		[DatabaseGenerated(DatabaseGeneratedOption.Computed)]
 		public decimal? AssessmentBalance { get; set; }
 		public bool? PartPaymentAllow { get; set; }
 		public bool? AsExpiryDate { get; set; }
-		public bool? IsExpired { get; set; }
+		public bool IsExpired { get; set; }
 		public long? ParentID { get; set; }
-		public DateTime? DateCreated { get; set; }
+		public DateTime DateCreated { get; set; }
 		public bool? IsReversed { get; set; }
 		[MaxLength(500)]
 		public string Reversedby { get; set; }
