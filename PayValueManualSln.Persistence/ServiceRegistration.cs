@@ -5,6 +5,7 @@ using PayValueManualSln.Application.Interfaces;
 using PayValueManualSln.Infrastructure.Persistence.Contexts;
 using PayValueManualSln.Infrastructure.Persistence.Repository;
 using PayValueManualSln.Persistence.Repositories;
+using PayValueManualSln.Shared.Services;
 
 namespace PayValueManualSln.Infrastructure.Persistence
 {
@@ -19,7 +20,8 @@ namespace PayValueManualSln.Infrastructure.Persistence
 			services.AddTransient(typeof(IGenericRepositoryAsync<>), typeof(GenericRepositoryAsync<>));
 			#endregion
 			services.AddScoped<IEntityManager, EntityMangerAsync>();
+			
 
-		}
+        }
 	}
 }

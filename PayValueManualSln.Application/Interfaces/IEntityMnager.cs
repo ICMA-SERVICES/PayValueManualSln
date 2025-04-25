@@ -17,5 +17,8 @@ namespace PayValueManualSln.Application.Interfaces
         Task<Response<PayerCollectionResponse>> ApprovePayerDetailAsync(UpdatePayerRequest request);
 		Task<Response<bool>> SendPayerDetialToAdminAsync(UpdatePayerRequest request);
         Task<Response<List<AdditionalServiceDetailDto>>> GetAdditionalServiceDetail();
+		Task<string> GenerateStinAsync(string username, int id);
+		Task<Response<List<PayerDetailsDto>>> GetPendingAssessmentAsync();
+		Task<Response<List<PayerDetailsDto>>> GetPendingAssessmentByRequesterIdAsync();
     }
 }

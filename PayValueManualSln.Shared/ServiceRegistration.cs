@@ -14,6 +14,7 @@ namespace PayValueManualSln.Infrastructure.Shared
             services.AddTransient<IDateTimeService, DateTimeService>();
             services.AddScoped<IDapper, DapperService>();
             services.AddTransient<IHttpClientHelperService, HttpClientHelperService>();
+            services.AddTransient<IAuthenticatedUserService, AuthenticatedUserService>();
         }
     }
 }
