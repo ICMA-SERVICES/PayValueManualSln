@@ -12,8 +12,9 @@ namespace PayValueManualSln.Application.Mapping
     {
         public GeneralProfile()
         {
-            CreateMap<UpdatePayerRequest, UpdateIndividualPayerRequestDto>().ReverseMap();
-            CreateMap<UpdatePayerRequest, UpdateAgentRequestDto>().ReverseMap();
+            CreateMap<UpdatePayerRequest, UpdateIndividualPayerRequestDto>();
+            CreateMap<UpdatePayerRequest, UpdateAgentRequestDto>();
+
         }
     }
 }

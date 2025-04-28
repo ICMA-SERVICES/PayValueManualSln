@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\PayValueManualSln.Application\PayValueManualSln.Application.csproj" />
     <ProjectReference Include="..\PayValueManualSln.Domain\PayValueManualSln.Domain.csproj" />
+    <ProjectReference Include="..\PayValueManualSln.Shared\PayValueManualSln.Shared.csproj" />
   </ItemGroup>
 
 </Project>

@@ -13,6 +13,7 @@ using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -27,8 +28,9 @@ namespace PayValueManualSln.Persistence.Repositories
 		private readonly IHttpClientHelperService _httpClientHelperService;
 		private readonly IMapper _mapper;
         private readonly IAuthenticatedUserService _authenticatedUser;
+        private readonly HttpClient _httpClient;
 
-        public EntityMangerAsync(ApplicationDbContext context, ILogger logger, IConfiguration config, IHttpClientHelperService httpClientHelperService,IMapper mapper,IAuthenticatedUserService authenticatedUserService)
+        public EntityMangerAsync(ApplicationDbContext context, ILogger logger, IConfiguration config, IHttpClientHelperService httpClientHelperService,IMapper mapper,IAuthenticatedUserService authenticatedUserService, HttpClient httpClient)
         {
             _context = context;
             _logger = logger;
@@ -36,9 +38,35 @@ namespace PayValueManualSln.Persistence.Repositories
             _httpClientHelperService = httpClientHelperService;
 			_mapper = mapper;
             _authenticatedUser = authenticatedUserService;
+            _httpClient = httpClient;
+            _httpClient.BaseAddress = new Uri("http://services.ogunstaterevenue.com/");
         }
 
+        public async Task<string> GenerateStinAsync(string username, int id)
+        {
+            var endpoint = $"PayerRegistrationService/GenerateSTIN/api/Generate/STINGenerate/{username}/{id}";
 
+            var response = await _httpClient.GetAsync(endpoint);
+            response.EnsureSuccessStatusCode();
+
+            return await response.Content.ReadAsStringAsync();
+        }
+        public async Task<ExternalApiResponseDto<PayerCollectionResponse>> CallUpdatePayerDetailAsync(object requestBody, string endpointUrl)
+        {
+            var json = JsonConvert.SerializeObject(requestBody);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync(endpointUrl, content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                // Optionally log or handle different status codes
+                return null;
+            }
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+            return JsonConvert.DeserializeObject<ExternalApiResponseDto<PayerCollectionResponse>>(responseContent);
+        }
         public async Task<Response<List<ServicesDto>>> GetServicesAsync()
 		{
 			var response = new Response<List<ServicesDto>>();
@@ -69,7 +97,6 @@ namespace PayValueManualSln.Persistence.Repositories
 			}
 			return response;
 		}
-
 		public async Task<Response<List<RevenueDto>>> GetRevenueAsync()
 		{
 			var response = new Response<List<RevenueDto>>();
@@ -100,7 +127,6 @@ namespace PayValueManualSln.Persistence.Repositories
 			}
 			return response;
 		}
-
 		public async Task<ResponseDto> InsertAssessmentDataToBillTablesAsync(int assessmentId)
 		{
 			var response = new ResponseDto();
@@ -239,9 +265,9 @@ namespace PayValueManualSln.Persistence.Repositories
 					request.utin = string.IsNullOrEmpty(request.utin) ? request.payerUtin : request.utin;
 					var json = JsonConvert.SerializeObject(payerRequest);
 					_logger.Information($"##External API REQUEST##: {json}");
-					var externalUrl = $"{baseUrl}{endpointUrl}";
-					var result = await _httpClientHelperService.PostAsync<object, ExternalApiResponseDto<PayerCollectionResponse>>(externalUrl, json, "", MerchantCode, request.payerUtin);
-					string errors = result == null ? "The remote server returned null response" : string.Join(",", result.Errors);
+					var externalUrl = $"{baseUrl}{"/PayerRegistration/int/retrive-payer-Information"}";
+                    var result = await CallUpdatePayerDetailAsync(payerRequest, $"{externalUrl}");
+                    string errors = result == null ? "The remote server returned null response" : string.Join(",", result.Errors);
 					if (result != null)
 					{
 						_logger.Information($"##External API Response##: {JsonConvert.SerializeObject(result)}");
@@ -315,8 +341,76 @@ namespace PayValueManualSln.Persistence.Repositories
             }
 			return response;
         }
+        public async Task<Response<List<PayerDetailsDto>>> GetPendingAssessmentAsync()
+        {
+            var response = new Response<List<PayerDetailsDto>>();
+            try
+            {
+                var result = await _context.PayerDetails.Where(x => x.IsApproved == null).ToListAsync();
+				if(result == null || !result.Any())
+				{
+					response.Succeeded = false;
+                    response.Message = "No pending assessments found.";
+                    return response;
+                }
+				response.Message = "Pending assessments retrieved successfully.";
+                response.Data = result.Select(s => new PayerDetailsDto
+                {
+                    payerName = s.payerName,
+                    payerUtin = s.payerUtin,
+                    dateCreated = s.dateCreated,
+                    email = s.email,
+                    phoneNo = s.phoneNo,
+                    address = s.address,
+                    IsApproved = s.IsApproved
+                }).ToList();
 
+                response.Succeeded = true;
 
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "An error occurred in GetPendingAssessment.");
+                response.Succeeded = false;
+                response.Message = $"An error occurred: {ex.Message}";
+            }
+			return response;
+        }
+        public async Task<Response<List<PayerDetailsDto>>> GetPendingAssessmentByRequesterIdAsync()
+        {
+            var response = new Response<List<PayerDetailsDto>>();
+            try
+            {
+                var result = await _context.PayerDetails.Where(x => x.ChangeRequesterId == _authenticatedUser.UserId).ToListAsync();
+                if (result == null || !result.Any())
+                {
+                    response.Succeeded = false;
+                    response.Message = "No pending assessments id found.";
+                    return response;
+                }
+                response.Message = "Pending assessments id retrieved successfully.";
+                response.Data = result.Select(s => new PayerDetailsDto
+                {
+                    payerName = s.payerName,
+                    payerUtin = s.payerUtin,
+                    dateCreated = s.dateCreated,
+                    email = s.email,
+                    phoneNo = s.phoneNo,
+                    address = s.address,
+                    IsApproved = s.IsApproved
+                }).ToList();
+
+                response.Succeeded = true;
+
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "An error occurred in GetPendingAssessment ID.");
+                response.Succeeded = false;
+                response.Message = $"An error occurred: {ex.Message}";
+            }
+            return response;
+        }
 
     }
 }

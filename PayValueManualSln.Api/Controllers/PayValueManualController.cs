@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using PayValueManualSln.Application.DTOs;
 using PayValueManualSln.Application.Helpers;
 using PayValueManualSln.Application.Interfaces;
+using PayValueManualSln.Domain.Entities;
 using System.Xml.Linq;
 
 namespace PayValueManualSln.Api.Controllers
@@ -99,6 +100,7 @@ namespace PayValueManualSln.Api.Controllers
             {
                 return BadRequest(ModelState);
             }
+
             var result = await _entityManager.ApprovePayerDetailAsync(request);
             return Ok(result);
         }
@@ -133,7 +135,60 @@ namespace PayValueManualSln.Api.Controllers
             {
                 return BadRequest(response);
             }
-            ;
+            
+        }
+		[HttpGet("get-utin")]
+        public async Task<IActionResult> GetUtin(string username, int id)
+		{ 
+		 var result = await _entityManager.GenerateStinAsync(username, id);
+			return Ok(result);
+        }
+        [HttpGet("GetPendingAssessmentAsync")]
+        public async Task<IActionResult> GetPendingAssessmentAsync(DataSourceLoadOptions loadOptions)
+        {
+            var responseList = new List<PayerDetailsDto>();
+            var searchResult = await _entityManager.GetPendingAssessmentAsync();
+
+            if (searchResult.Succeeded)
+            {
+                responseList = searchResult.Data;
+
+                loadOptions.PrimaryKey = new[] { $"taxPayerReferenceNumber" };
+                var test = DataSourceLoader.Load(responseList, loadOptions);
+                if (test.data != null)
+                {
+                    return Ok(test);
+                }
+                return Ok(new { ResonseList = test, SearchResult = searchResult });
+            }
+            else
+            {
+                return BadRequest(searchResult);
+            }
+        }
+        public async Task<IActionResult> GetPendingAssessmentByRequesterIdAsync(DataSourceLoadOptions loadOptions)
+        {
+            var responseList = new List<PayerDetailsDto>();
+            var searchResult = await _entityManager.GetPendingAssessmentByRequesterIdAsync();
+
+            if (searchResult.Succeeded)
+            {
+                responseList = searchResult.Data;
+
+                loadOptions.PrimaryKey = new[] { $"taxPayerReferenceNumber" };
+                var test = DataSourceLoader.Load(responseList, loadOptions);
+                if (test.data != null)
+                {
+                    return Ok(test);
+                }
+                return Ok(new { ResonseList = test, SearchResult = searchResult });
+            }
+            else
+            {
+                return BadRequest(searchResult);
+            }
         }
     }
-}
+
+    }
+

@@ -2,6 +2,7 @@ using PayValueManualSln.Infrastructure.Persistence;
 using PayValueManualSln.Infrastructure.Shared;
 using PayValueManualSln.Core.Application;
 using Serilog;
+using Microsoft.AspNetCore.Hosting;
 
 namespace PayValueManualSln.Api
 {
@@ -39,8 +40,10 @@ namespace PayValueManualSln.Api
 			// Add services to the container.
 
 			builder.Services.AddControllers();
-			// Registering Services 
-			builder.Services.AddApplicationLayer();
+            // Registering Services 
+            builder.Services.AddHttpContextAccessor();
+			builder.Services.AddHttpClient();
+            builder.Services.AddApplicationLayer();
 			builder.Services.AddPersistenceInfrastructure(builder.Configuration);
 			builder.Services.AddSharedInfrastructure(builder.Configuration);
 			// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
