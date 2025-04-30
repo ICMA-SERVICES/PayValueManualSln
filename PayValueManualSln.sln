@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PayValueManualSln.Shared", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PayValueManualSln.Api", "PayValueManualSln.Api\PayValueManualSln.Api.csproj", "{E1014366-C34B-4200-BCE8-9EC8C7CA2176}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PayValueManualSln.Identity", "PayValueManualSln.Identity\PayValueManualSln.Identity.csproj", "{C1E233A3-17EF-4C29-AA7D-6F8AD4F99D54}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,6 +47,10 @@ Global
 		{E1014366-C34B-4200-BCE8-9EC8C7CA2176}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E1014366-C34B-4200-BCE8-9EC8C7CA2176}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E1014366-C34B-4200-BCE8-9EC8C7CA2176}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C1E233A3-17EF-4C29-AA7D-6F8AD4F99D54}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C1E233A3-17EF-4C29-AA7D-6F8AD4F99D54}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C1E233A3-17EF-4C29-AA7D-6F8AD4F99D54}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C1E233A3-17EF-4C29-AA7D-6F8AD4F99D54}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -55,6 +61,7 @@ Global
 		{06181338-9F4A-44B8-92D4-2A6606401172} = {65EEAC7F-1A3F-4DEC-AAC4-244AB1834105}
 		{B2546D13-F895-4277-8CA1-6E2105240E64} = {65EEAC7F-1A3F-4DEC-AAC4-244AB1834105}
 		{E1014366-C34B-4200-BCE8-9EC8C7CA2176} = {D83FE2EA-C5A2-4DCB-A043-4413C647269B}
+		{C1E233A3-17EF-4C29-AA7D-6F8AD4F99D54} = {65EEAC7F-1A3F-4DEC-AAC4-244AB1834105}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {44633F19-3285-408C-AB00-BDC6999A6303}

@@ -14,5 +14,5 @@
   <ItemGroup>
     <ProjectReference Include="..\PayValueManualSln.Application\PayValueManualSln.Application.csproj" />
   </ItemGroup>
-
+  
 </Project>

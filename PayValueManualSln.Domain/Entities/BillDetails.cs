@@ -46,5 +46,7 @@ namespace PayValueV2.Domain.Entities.PayValue
 		public int? UpdateById { get; set; }
 		public bool? IsReversed { get; set; }
 		public BillInfo BillInfo { get; set; }
-	}
+        public DateTime? RenewalDate { get; set; }
+        public bool? IsRenewed { get; set; } = false;
+    }
 }

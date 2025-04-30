@@ -166,6 +166,7 @@ namespace PayValueManualSln.Api.Controllers
                 return BadRequest(searchResult);
             }
         }
+        [HttpGet("GetPendingAssessmentByRequesterIdAsync")]
         public async Task<IActionResult> GetPendingAssessmentByRequesterIdAsync(DataSourceLoadOptions loadOptions)
         {
             var responseList = new List<PayerDetailsDto>();
@@ -188,7 +189,38 @@ namespace PayValueManualSln.Api.Controllers
                 return BadRequest(searchResult);
             }
         }
+
+        [HttpGet("ViewPendingAssessment/{payerUtin}")]
+        public async Task<IActionResult> ViewPendingAssessment([FromRoute] string payerUtin)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            var response = await _entityManager.ViewPendingAssessment(payerUtin);
+            return Ok(response);
+        }
+
+        //UPDATE RECORD
+        [HttpPost("Get-list-revenue")]
+        public async Task<IActionResult> GetRevenueList([FromBody] GetRateRequestDto requestDto)
+        {
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            var response = await _entityManager.GetRevenuesForAssessmentAsync(requestDto);
+            return Ok(response);
+        }
+
+        [HttpPost("CreateAssesment")]
+        public async Task<IActionResult> CreateAssesmentAsync([FromBody] CreateAssessmentRequestDto request)
+        {
+            var response = await _entityManager.CreateAssessment(request);
+            return Ok(response);
+        }
     }
 
-    }
+}
 

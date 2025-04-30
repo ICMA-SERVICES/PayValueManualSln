@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using PayValueManualSln.Application.Interfaces;
 using PayValueManualSln.Domain.Entities;
 using PayValueManualSln.Domain.Entities.Setting;
+using PayValueManualSln.Domain.Entities.Settings;
 using PayValueManualSln.Persistence.Repositories;
 using PayValueV2.Domain.Entities.PayValue;
 using System.Collections.Generic;
@@ -35,6 +36,31 @@ namespace PayValueManualSln.Infrastructure.Persistence.Contexts
 		public virtual DbSet<BillInfo> BillInfo { get; set; }
 		public virtual DbSet<Assessment> Assessment { get; set; }
         public virtual DbSet<PayerDetails> PayerDetails { get; set; }
+        public virtual DbSet<Service> Service { get; set; }
+        public virtual DbSet<Rate> Rate { get; set; }
+        public virtual DbSet<Agency> Agency { get; set; }
+        public virtual DbSet<AgencyLogo> AgencyLogo { get; set; }
+        public virtual DbSet<AgencySignature> AgencySignature { get; set; }
+        public virtual DbSet<AppModule> AppModule { get; set; }
+        public virtual DbSet<Category> Category { get; set; }
+        public virtual DbSet<Department> Department { get; set; }
+        public virtual DbSet<InputDefinitionMapping> InputDefinitionMapping { get; set; }
+        public virtual DbSet<Location> Location { get; set; }
+        public virtual DbSet<MerchantConfig> MerchantConfig { get; set; }
+        public virtual DbSet<RateRange> Range { get; set; }
+        public virtual DbSet<RenewalFrequency> RenewalFrequency { get; set; }
+        public virtual DbSet<ServiceDetails> ServiceDetails { get; set; }
+        public virtual DbSet<ServiceMethod> ServiceMethod { get; set; }
+        public virtual DbSet<ServiceRevenue> ServiceRevenue { get; set; }
+        public virtual DbSet<Types> Types { get; set; }
+        public virtual DbSet<UserDepartment> UserDepartment { get; set; }
+        public virtual DbSet<Zone> Zone { get; set; }
+        public virtual DbSet<Input> Input { get; set; }
+        public virtual DbSet<DepositOnConsent> DepositOnConsent { get; set; }
+        public DbSet<RenewalFrequency> RenewalFrequencies { get; set; }
+        public virtual DbSet<ValueTemplateForLocation> ValueTemplateForLocation { get; set; }
+        public virtual DbSet<BillAdditionalInfo> BillAdditionalInfo { get; set; }
+        public virtual DbSet<ServiceMethodSetup> ServiceMethodSetups { get; set; }
         public virtual DbSet<AdditionalServiceDetail> AdditionalServiceDetail { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
