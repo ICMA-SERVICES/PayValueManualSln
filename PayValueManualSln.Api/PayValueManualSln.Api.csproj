@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PayValueManualSln.Application\PayValueManualSln.Application.csproj" />
+    <ProjectReference Include="..\PayValueManualSln.Identity\PayValueManualSln.Identity.csproj" />
     <ProjectReference Include="..\PayValueManualSln.Persistence\PayValueManualSln.Persistence.csproj" />
     <ProjectReference Include="..\PayValueManualSln.Shared\PayValueManualSln.Shared.csproj" />
   </ItemGroup>

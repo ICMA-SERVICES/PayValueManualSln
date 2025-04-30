@@ -3,10 +3,13 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using PayValueManualSln.Application.Interfaces;
+using PayValueManualSln.Identity;
 using PayValueManualSln.Infrastructure.Identity.Contexts;
 using PayValueManualSln.Infrastructure.Identity.Models;
 using System;
 using System.Text;
+
 
 namespace PayValueManualSln.Infrastructure.Identity
 {
@@ -16,18 +19,18 @@ namespace PayValueManualSln.Infrastructure.Identity
         {
             if (configuration.GetValue<bool>("UseInMemoryDatabase"))
             {
-                services.AddDbContext<IdentityContext>(options =>
-                    options.UseInMemoryDatabase("IdentityDb"));
+                //services.AddDbContext<IdentityContext>(options =>
+                //    options.UseInMemoryDatabase("IdentityDb"));
             }
             else
             {
                 services.AddDbContext<IdentityContext>(options =>
                 options.UseSqlServer(
-                    configuration.GetConnectionString("DefaultConnection"),
+                    configuration.GetConnectionString("IdentityConnection"),
                     b => b.MigrationsAssembly(typeof(IdentityContext).Assembly.FullName)));
             }
-            services.AddIdentity<ApplicationUser, IdentityRole>().AddEntityFrameworkStores<IdentityContext>().AddDefaultTokenProviders();
-          
+            services.AddIdentity<ApplicationUser, Microsoft.AspNetCore.Identity.IdentityRole>().AddEntityFrameworkStores<IdentityContext>().AddDefaultTokenProviders();       
+            services.AddScoped<ICurrentUserInfoService, CurrentUserInfoService>();
         }
     }
                 

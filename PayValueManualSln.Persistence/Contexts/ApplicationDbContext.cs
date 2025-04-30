@@ -35,6 +35,7 @@ namespace PayValueManualSln.Infrastructure.Persistence.Contexts
 		public virtual DbSet<BillDetails> BillDetails { get; set; }
 		public virtual DbSet<BillInfo> BillInfo { get; set; }
 		public virtual DbSet<Assessment> Assessment { get; set; }
+        public virtual DbSet<Audit> Audit { get; set; }
         public virtual DbSet<PayerDetails> PayerDetails { get; set; }
         public virtual DbSet<Service> Service { get; set; }
         public virtual DbSet<Rate> Rate { get; set; }

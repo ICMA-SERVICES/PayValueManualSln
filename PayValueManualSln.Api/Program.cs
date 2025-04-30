@@ -1,5 +1,6 @@
 using PayValueManualSln.Infrastructure.Persistence;
 using PayValueManualSln.Infrastructure.Shared;
+using PayValueManualSln.Infrastructure.Identity;
 using PayValueManualSln.Core.Application;
 using Serilog;
 using Microsoft.AspNetCore.Hosting;
@@ -43,11 +44,15 @@ namespace PayValueManualSln.Api
             // Registering Services 
             builder.Services.AddHttpContextAccessor();
 			builder.Services.AddHttpClient();
+			builder.Services.AddIdentityInfrastructure();
+             
+
+            // No changes to the existing code are needed here if the extension method is defined in the correct namespace.
             builder.Services.AddApplicationLayer();
 			builder.Services.AddPersistenceInfrastructure(builder.Configuration);
 			builder.Services.AddSharedInfrastructure(builder.Configuration);
-			// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-			builder.Services.AddEndpointsApiExplorer();
+            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+            builder.Services.AddEndpointsApiExplorer();
 			builder.Services.AddSwaggerGen();
 			var app = builder.Build();
 			// Configure the HTTP request pipeline.
@@ -73,4 +78,5 @@ namespace PayValueManualSln.Api
 			app.Run();
 		}
 	}
+   
 }

@@ -1,7 +1,8 @@
 ﻿using MediatR;
+using Microsoft.AspNetCore.Identity;
 using PayValueManualSln.Application.Interfaces;
+using PayValueManualSln.Domain.Entities;
 using PayValueManualSln.Infrastructure.Persistence.Contexts;
-using PayValueManualSln.Infrastructure.Identity.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,30 +14,30 @@ namespace PayValueManualSln.Persistence.Services
     public class AuditRepository : IAuditRepository
     {
         private readonly ApplicationDbContext _context;
-        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ICurrentUserInfoService _userInfoService;
 
-        public AuditRepository(ApplicationDbContext context,
-                               UserManager<ApplicationUser> userManager)
+        public AuditRepository(ApplicationDbContext context, ICurrentUserInfoService userInfoService)
         {
             _context = context;
-            _userManager = userManager;
+            _userInfoService = userInfoService;
         }
+
         public async Task CreateAudit(string userId, string action)
         {
-            if (userId != null)
+            var fullName = await _userInfoService.GetUserFullNameAsync(userId);
+
+            var newAudit = new Audit
             {
-                var user = await _userManager.FindByIdAsync(userId);
-                var newAudit = new Audit
-                {
-                    Action = action,
-                    UserId = userId,
-                    UserFullName = user.FirstName + " " + user.LastName,
-                    Date = DateTime.Now
-                };
-                await _context.Audit.AddAsync(newAudit);
-                await _context.SaveChangesAsync();
-            }
+                Action = action,
+                UserId = userId,
+                UserFullName = fullName,
+                Date = DateTime.Now
+            };
+
+            await _context.Audit.AddAsync(newAudit);
+            await _context.SaveChangesAsync();
         }
     }
+
 }
-}
+

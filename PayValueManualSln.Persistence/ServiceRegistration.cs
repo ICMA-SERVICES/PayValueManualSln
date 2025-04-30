@@ -22,7 +22,8 @@ namespace PayValueManualSln.Infrastructure.Persistence
 			#endregion
 			services.AddScoped<IEntityManager, EntityMangerAsync>();
 			services.AddTransient<RateServices>();
-			
+			services.AddTransient<IAuditRepository, AuditRepository>();	
+
 
         }
 	}

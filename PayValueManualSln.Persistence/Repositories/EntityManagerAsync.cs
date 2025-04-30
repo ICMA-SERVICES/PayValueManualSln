@@ -39,9 +39,10 @@ namespace PayValueManualSln.Persistence.Repositories
         private readonly HttpClient _httpClient;
         private readonly RateServices _rateservice;
         private readonly IDapper _dapper;
+        private readonly IAuditRepository _audit;
         public Appsettings _appsettings { get; }
 
-        public EntityMangerAsync(ApplicationDbContext context, IOptions<Appsettings> appsettings, IDapper dapper ,ILogger logger, IConfiguration config, IHttpClientHelperService httpClientHelperService, IMapper mapper, IAuthenticatedUserService authenticatedUserService, HttpClient httpClient, RateServices rateServices)
+        public EntityMangerAsync(ApplicationDbContext context, IAuditRepository audit,IOptions<Appsettings> appsettings, IDapper dapper ,ILogger logger, IConfiguration config, IHttpClientHelperService httpClientHelperService, IMapper mapper, IAuthenticatedUserService authenticatedUserService, HttpClient httpClient, RateServices rateServices)
         {
             _context = context;
             _logger = logger;
@@ -54,6 +55,7 @@ namespace PayValueManualSln.Persistence.Repositories
             _rateservice = rateServices;
             _dapper = dapper;
             _appsettings = appsettings.Value;
+            _audit = audit;
         }
 
         public async Task<string> GenerateStinAsync(string username, int id)
@@ -686,6 +688,7 @@ namespace PayValueManualSln.Persistence.Repositories
 
         public async Task<Response<CreateAssessmentRequestDto>> CreateAssessment(CreateAssessmentRequestDto request)
         {
+            var response = new Response<CreateAssessmentRequestDto>();
             using (var trans = _context.Database.BeginTransaction())
             {
                 try
@@ -797,19 +800,25 @@ namespace PayValueManualSln.Persistence.Repositories
 
                         await _audit.CreateAudit(_authenticatedUser.UserId, $"Added a new assessment with Parameter of ${JsonConvert.SerializeObject(request)}");
                         trans.Commit();
-                        return ApplicationConstants.SuccessMessage<CreateAssessmentRequestDto>(request, "The assessment was created");
+                        response.Message = "Assessment created successfully";
+                        response.Succeeded = true;
+                        response.Data = request;
+                        return response;
                     }
 
                     trans.Rollback();
-                    return ApplicationConstants.FailureMessage<CreateAssessmentRequestDto>(null, "The assessment could not be created");
+                    response.Message = "The assessment was not created";
+                    response.Succeeded = false;
+                    response.Data = null;
+                    return response;
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex.Message, "An error has occurred on CreateAssessment, PayValue Repository");
+                    _logger.Error(ex.Message, "An error has occurred on CreateAssessment, PayValue Repository");
                     trans.Rollback();
-                    return ApplicationConstants.FailureMessage<CreateAssessmentRequestDto>(null, "An error occured");
                 }
             }
+            return response;
         }
     }
 
