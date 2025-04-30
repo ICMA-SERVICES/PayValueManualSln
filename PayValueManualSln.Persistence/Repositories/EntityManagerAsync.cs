@@ -555,25 +555,7 @@ namespace PayValueManualSln.Persistence.Repositories
             }
         }
 
-        public string GenerateBaseNumber(string merchantCode)
-        {
-            string baseNumber = string.Empty;
-            try
-            {
-                var dbParams = new DynamicParameters();
-                dbParams.Add("@MerchantCode", merchantCode, DbType.String);
-                var result = _dapper.GetAll<string>($"[dbo].[GenerateBaseNumber]", dbParams, commandType: CommandType.StoredProcedure, _appsettings.DefaultConnection);
-
-                baseNumber = result.FirstOrDefault();
-                return baseNumber;
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex.InnerException == null ? "Error occurred while processing your request" : ex.InnerException.Message);
-            }
-
-            return baseNumber;
-        }
+       
 
         private bool IsRenewalRequired(long serviceRevenueId)
         {
@@ -684,6 +666,25 @@ namespace PayValueManualSln.Persistence.Repositories
                 response.Message = "Failed";
             }
             return response;
+        }
+        public string GenerateBaseNumber(string merchantCode)
+        {
+            string baseNumber = string.Empty;
+            try
+            {
+                var dbParams = new DynamicParameters();
+                dbParams.Add("@MerchantCode", merchantCode, DbType.String);
+                var result = _dapper.GetAll<string>($"[dbo].[GenerateBaseNumber]", dbParams, commandType: CommandType.StoredProcedure, _appsettings.DefaultConnection);
+
+                baseNumber = result.FirstOrDefault();
+                return baseNumber;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex.InnerException == null ? "Error occurred while processing your request" : ex.InnerException.Message);
+            }
+
+            return baseNumber;
         }
 
         public async Task<Response<CreateAssessmentRequestDto>> CreateAssessment(CreateAssessmentRequestDto request)
@@ -820,6 +821,39 @@ namespace PayValueManualSln.Persistence.Repositories
             }
             return response;
         }
+        public async Task<Response<List<MapServiceToTypeRequestDto>>> MapServiceToType(List<MapServiceToTypeRequestDto> request)
+        {
+            var response = new Response<List<MapServiceToTypeRequestDto>>();
+            try
+            {
+                var map = new List<MapServiceToTypeRequestDto>();
+                foreach (var item in request)
+                {
+                    var typeName = await _context.Type.Select(x => new { x.Name, x.Id }).FirstOrDefaultAsync(x => x.Id == item.TypeId);
+                    var obj = new MapServiceToTypeRequestDto
+                    {
+                        TypeId = item.TypeId,
+                        ServiceId = item.ServiceId,
+                        CreatedBy = _authenticatedUser.UserId ?? null,
+                        TypeName = typeName.Name
+                    };
+                }
+                await _context.AddRangeAsync(map);
+                var save = await _context.SaveChangesAsync();
+                response.Message = save > 0 ? "Successful" : "Unsuccessful";
+                response.Succeeded = save > 0;
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.Message, "An error has occurred on MapServiceToType, PayValue Repository");
+                
+            }
+            return response;
+        }
+       
+       
+
     }
 
     }

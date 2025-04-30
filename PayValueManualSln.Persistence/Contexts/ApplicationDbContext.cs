@@ -53,7 +53,7 @@ namespace PayValueManualSln.Infrastructure.Persistence.Contexts
         public virtual DbSet<ServiceDetails> ServiceDetails { get; set; }
         public virtual DbSet<ServiceMethod> ServiceMethod { get; set; }
         public virtual DbSet<ServiceRevenue> ServiceRevenue { get; set; }
-        public virtual DbSet<Types> Types { get; set; }
+        public virtual DbSet<Types> Type { get; set; }
         public virtual DbSet<UserDepartment> UserDepartment { get; set; }
         public virtual DbSet<Zone> Zone { get; set; }
         public virtual DbSet<Input> Input { get; set; }
@@ -79,8 +79,19 @@ namespace PayValueManualSln.Infrastructure.Persistence.Contexts
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
             //All Decimals will have 18,2 Range
-
             
+           
+            modelBuilder.Entity<Rate>()
+                .HasOne(r => r.Service)  
+                .WithMany(s => s.Rate)  
+                .HasForeignKey(r => r.ServiceId) 
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<Revenue>()
+            .HasOne(r => r.Service)  
+            .WithMany(s => s.Revenues)  
+            .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<Agency>()
+           .HasKey(a => new { a.Code, a.Id });
 
             modelBuilder.Entity<Revenue>(entity =>
 			{
@@ -123,7 +134,7 @@ namespace PayValueManualSln.Infrastructure.Persistence.Contexts
 				entity.Property(e => e.UpdatedBy).HasMaxLength(350);
 
 				entity.HasOne(d => d.Service)
-					.WithMany(p => p.Revenue)
+					.WithMany(p => p.Revenues)
 					.HasForeignKey(d => d.ServiceId)
 					.OnDelete(DeleteBehavior.ClientSetNull)
 					.HasConstraintName("FK_ServiceRevenue_Services");

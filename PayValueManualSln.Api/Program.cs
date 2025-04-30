@@ -44,9 +44,7 @@ namespace PayValueManualSln.Api
             // Registering Services 
             builder.Services.AddHttpContextAccessor();
 			builder.Services.AddHttpClient();
-			builder.Services.AddIdentityInfrastructure();
-             
-
+			builder.Services.AddIdentityInfrastructure(builder.Configuration);             
             // No changes to the existing code are needed here if the extension method is defined in the correct namespace.
             builder.Services.AddApplicationLayer();
 			builder.Services.AddPersistenceInfrastructure(builder.Configuration);

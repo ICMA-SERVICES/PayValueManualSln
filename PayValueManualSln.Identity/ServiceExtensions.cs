@@ -26,7 +26,7 @@ namespace PayValueManualSln.Infrastructure.Identity
             {
                 services.AddDbContext<IdentityContext>(options =>
                 options.UseSqlServer(
-                    configuration.GetConnectionString("IdentityConnection"),
+                    configuration.GetConnectionString("DefaultConnection"),
                     b => b.MigrationsAssembly(typeof(IdentityContext).Assembly.FullName)));
             }
             services.AddIdentity<ApplicationUser, Microsoft.AspNetCore.Identity.IdentityRole>().AddEntityFrameworkStores<IdentityContext>().AddDefaultTokenProviders();       

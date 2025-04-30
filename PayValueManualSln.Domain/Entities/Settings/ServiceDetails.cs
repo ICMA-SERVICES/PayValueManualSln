@@ -20,6 +20,6 @@ namespace PayValueManualSln.Domain.Entities.Settings
         public long AdditionalInfoId { get; set; }
 
         public virtual BillAdditionalInfo BillAdditionalInfo { get; set; }
-        public virtual Services Service { get; set; }
+        
     }
 }

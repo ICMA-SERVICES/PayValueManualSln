@@ -202,7 +202,7 @@ namespace PayValueManualSln.Api.Controllers
         }
 
         //UPDATE RECORD
-        [HttpPost("Get-list-revenue")]
+        [HttpPost("list-revenue")]
         public async Task<IActionResult> GetRevenueList([FromBody] GetRateRequestDto requestDto)
         {
 
@@ -217,7 +217,27 @@ namespace PayValueManualSln.Api.Controllers
         [HttpPost("CreateAssesment")]
         public async Task<IActionResult> CreateAssesmentAsync([FromBody] CreateAssessmentRequestDto request)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
             var response = await _entityManager.CreateAssessment(request);
+            return Ok(response);
+        }
+        [HttpPost("GenerateBaseNumber")]
+        public async Task<IActionResult> GenerateBaseNumber([FromQuery] string merchantCode)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            var response = _entityManager.GenerateBaseNumber(merchantCode);
+            return Ok(response);
+        }
+        [HttpPost("MapServiceToTypes")]
+        public async Task<IActionResult> MapServiceToTypes([FromBody] List<MapServiceToTypeRequestDto> request)
+        {
+            var response = _entityManager.MapServiceToType(request);
             return Ok(response);
         }
     }

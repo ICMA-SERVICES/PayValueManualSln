@@ -39,6 +39,6 @@ namespace PayValueManualSln.Domain.Entities.Setting
 		public bool? IsApproved { get; set; }
 		public bool? IsForAllZones { get; set; }
 		public bool? IsServiceApplicableToAll { get; set; }
-		public virtual ICollection<Revenue> Revenue { get; set; }
+		public virtual ICollection<Revenue> Revenues { get; set; }
 	}
 }
