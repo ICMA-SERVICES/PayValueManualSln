@@ -1,4 +1,5 @@
 ﻿using DevExtreme.AspNet.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PayValueManualSln.Application.DTOs;
@@ -9,9 +10,10 @@ using System.Xml.Linq;
 
 namespace PayValueManualSln.Api.Controllers
 {
-	[Route("api/[controller]")]
-	[ApiController]
-	public class PayValueManualController : ControllerBase
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize]
+    public class PayValueManualController : ControllerBase
 	{
 		private readonly IEntityManager _entityManager;
 		public PayValueManualController(IEntityManager entityManager)

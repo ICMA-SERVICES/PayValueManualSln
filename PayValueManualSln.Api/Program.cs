@@ -4,6 +4,7 @@ using PayValueManualSln.Infrastructure.Identity;
 using PayValueManualSln.Core.Application;
 using Serilog;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.OpenApi.Models;
 
 namespace PayValueManualSln.Api
 {
@@ -51,8 +52,41 @@ namespace PayValueManualSln.Api
 			builder.Services.AddSharedInfrastructure(builder.Configuration);
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
-			builder.Services.AddSwaggerGen();
-			var app = builder.Build();
+			builder.Services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "PayValueManualSln.Api", Version = "v1" });
+
+                // Enable authorization using JWT in Swagger
+                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Description = @"JWT Authorization header using the Bearer scheme. 
+                        Enter 'Bearer' [space] and then your token in the text input below.
+                        Example: 'Bearer 12345abcdef'",
+                    Name = "Authorization",
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.ApiKey,
+                    Scheme = "Bearer"
+                });
+
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement()
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                },
+                Scheme = "oauth2",
+                Name = "Bearer",
+                In = ParameterLocation.Header,
+            },
+            new List<string>()
+        }
+    });
+            });
+            var app = builder.Build();
 			// Configure the HTTP request pipeline.
 			if (app.Environment.IsDevelopment())	
 			{
@@ -68,9 +102,9 @@ namespace PayValueManualSln.Api
 			app.UseHttpsRedirection();
 
 			app.UseAuthorization();
+            app.UseAuthentication();
 
-
-			app.MapControllers();
+            app.MapControllers();
 			app.UseSerilogRequestLogging();
 
 			app.Run();
