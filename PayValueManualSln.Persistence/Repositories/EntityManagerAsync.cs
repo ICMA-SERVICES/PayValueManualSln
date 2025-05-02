@@ -321,10 +321,19 @@ namespace PayValueManualSln.Persistence.Repositories
             var response = new Response<bool>();
             try
             {
-                var mapper = _mapper.Map<PayerDetails>(request);
-                mapper.ActedUponOn = DateTime.Now;
-                mapper.ChangeRequesterId = _authenticatedUser.UserId;
-                await _context.PayerDetails.AddAsync(mapper);
+                var obj = new PayerDetails
+                {
+                    payerName = request.companyName ?? $"{request.firstName} {request.surname} {request.otherName}",
+                    payerUtin = request.utin ?? request.payerUtin,
+                    dateCreated = DateTime.Now,
+                    email = request.contactEmail ?? request.email,
+                    phoneNo = request.contactPhoneNo,
+                    address = request.companyAddress ?? request.address,
+                    IsApproved = null,
+                    ChangeRequesterId = _authenticatedUser.UserId,
+                    ApprovalComment = request.ApprovalComment
+                };
+                await _context.PayerDetails.AddAsync(obj);
                 var result = await _context.SaveChangesAsync();
                 response.Message = result > 0
                 ? "Successful"
@@ -348,6 +357,11 @@ namespace PayValueManualSln.Persistence.Repositories
                 var list = await _context.AdditionalServiceDetail.ToListAsync();
                 response.Message = (list != null && list.Any()) ? "Successful" : "Unsuccessful";
                 response.Succeeded = list != null && list.Any();
+                response.Data = list.Select(s => new AdditionalServiceDetailDto
+                {
+                    Id = s.Id,
+                    AdditionalServiceDetailName = s.AdditionalServiceDetailName
+                }).ToList();
             }
             catch (Exception ex)
             {
@@ -468,7 +482,7 @@ namespace PayValueManualSln.Persistence.Repositories
                 var isForAllZones = await _rateservice.CheckIsForAllZones(request.ServiceId);
                 var rates = await _rateservice.GetRate(request.ServiceId, request.LocationId, request.ZoneId, isForAllZones, request.TypeId);
                 foreach (var rateItem in rates)
-                {
+                {   
                     var rate = new Rate();
                     //check if this revenue requires formula
                     if (rateItem.IsAmountAutomatic == false || rateItem.IsAmountAutomatic == null)

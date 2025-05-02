@@ -8,7 +8,7 @@ namespace PayValueManualSln.Shared.Services
     {
         public AuthenticatedUserService(IHttpContextAccessor httpContextAccessor)
         {
-            UserId = httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            UserId = httpContextAccessor.HttpContext?.User?.FindFirst("uid")?.Value;
             Email = httpContextAccessor.HttpContext?.User?.FindFirst("useremail")?.Value;
             UserName = httpContextAccessor.HttpContext?.User?.FindFirst("username")?.Value;
             RoleId = httpContextAccessor.HttpContext?.User?.FindFirst("roleid")?.Value;

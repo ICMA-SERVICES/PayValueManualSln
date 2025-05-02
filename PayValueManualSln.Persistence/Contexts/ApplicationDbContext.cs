@@ -41,6 +41,8 @@ namespace PayValueManualSln.Infrastructure.Persistence.Contexts
         public virtual DbSet<Rate> Rate { get; set; }
         public virtual DbSet<Agency> Agency { get; set; }
         public virtual DbSet<AgencyLogo> AgencyLogo { get; set; }
+        public virtual DbSet<ModuleApprovalConfig> ModuleApprovalConfig { get; set; }
+        public virtual DbSet<MapUserApproval> MapUserApproval { get; set; }
         public virtual DbSet<AgencySignature> AgencySignature { get; set; }
         public virtual DbSet<AppModule> AppModule { get; set; }
         public virtual DbSet<Category> Category { get; set; }
@@ -62,6 +64,8 @@ namespace PayValueManualSln.Infrastructure.Persistence.Contexts
         public virtual DbSet<ValueTemplateForLocation> ValueTemplateForLocation { get; set; }
         public virtual DbSet<BillAdditionalInfo> BillAdditionalInfo { get; set; }
         public virtual DbSet<ServiceMethodSetup> ServiceMethodSetups { get; set; }
+        public virtual DbSet<UsersRolePermission> UsersRolePermission { get; set; }
+        public virtual DbSet<MenuSetup> MenuSetup { get; set; }
         public virtual DbSet<AdditionalServiceDetail> AdditionalServiceDetail { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -79,13 +83,24 @@ namespace PayValueManualSln.Infrastructure.Persistence.Contexts
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
             //All Decimals will have 18,2 Range
-            
-           
+
+            modelBuilder.Entity<Agency>()
+   .HasOne(a => a.AgencySignature)
+   .WithOne(s => s.Agency)
+   .HasForeignKey<AgencySignature>(s => s.Id);
+            modelBuilder.Entity<Agency>()
+    .HasKey(a => new { a.Code, a.Id });
+
+            modelBuilder.Entity<AgencySignature>()
+                .HasOne(s => s.Agency)
+                .WithOne(a => a.AgencySignature)
+                .HasForeignKey<AgencySignature>(s => new { s.AgencyCode, s.Id });
             modelBuilder.Entity<Rate>()
-                .HasOne(r => r.Service)  
-                .WithMany(s => s.Rate)  
-                .HasForeignKey(r => r.ServiceId) 
-                .OnDelete(DeleteBehavior.Cascade);
+    .HasOne(r => r.ServiceRevenue)
+    .WithMany(sr => sr.Rate)
+    .HasForeignKey(r => r.ServiceRevenueId)
+    .OnDelete(DeleteBehavior.Restrict); // <- THIS breaks the cascade path
+
             modelBuilder.Entity<Revenue>()
             .HasOne(r => r.Service)  
             .WithMany(s => s.Revenues)  

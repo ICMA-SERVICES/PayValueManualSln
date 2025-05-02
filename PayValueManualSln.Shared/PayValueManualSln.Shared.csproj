@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.35" />
+    <PackageReference Include="MailKit" Version="2.8.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Abstractions" Version="2.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
@@ -18,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PayValueManualSln.Application\PayValueManualSln.Application.csproj" />
+    <ProjectReference Include="..\PayValueManualSln.Domain\PayValueManualSln.Domain.csproj" />
   </ItemGroup>
 
 </Project>

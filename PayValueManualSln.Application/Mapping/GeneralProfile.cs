@@ -14,6 +14,7 @@ namespace PayValueManualSln.Application.Mapping
         {
             CreateMap<UpdatePayerRequest, UpdateIndividualPayerRequestDto>();
             CreateMap<UpdatePayerRequest, UpdateAgentRequestDto>();
+            CreateMap<UpdatePayerRequest, PayerDetailsDto>();
 
         }
     }

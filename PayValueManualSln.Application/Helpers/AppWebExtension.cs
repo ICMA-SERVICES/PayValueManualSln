@@ -1,10 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace PayValueManualSln.Application.Helpers
 {
@@ -15,8 +13,8 @@ namespace PayValueManualSln.Application.Helpers
             var list = request.GetDisplayUrl();
             if (!list.Any()) return null;
             var value = list.Skip(position - 1).FirstOrDefault();
-            if (string.IsNullOrWhiteSpace(value.ToString())) return null;
-            return value.ToString();
+            if (string.IsNullOrWhiteSpace(value.ObjectToStrings())) return null;
+            return value.ObjectToString();
         }
 
         public static string Base64UrlEncode(string input)

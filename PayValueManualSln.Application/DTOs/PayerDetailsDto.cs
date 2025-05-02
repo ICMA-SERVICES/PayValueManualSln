@@ -10,7 +10,6 @@ namespace PayValueManualSln.Application.DTOs
     public class PayerDetailsDto
     {
         public string taxPayerReferenceNumber { get; set; }
-        [Key]
         public string payerUtin { get; set; }
         public string surname { get; set; }
         public string firstName { get; set; }

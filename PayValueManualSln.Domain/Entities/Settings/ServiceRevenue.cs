@@ -40,7 +40,7 @@ namespace PayValueManualSln.Domain.Entities.Settings
         public bool? IsRenewableByDate { get; set; } = false;
         public int RenewalFrequencyId { get; set; }
 
-        public virtual Services Service { get; set; }
+        public virtual Service Service { get; set; }
         public RenewalFrequency RenewalFrequency { get; set; }
         public virtual ICollection<Rate> Rate { get; set; }
     }
