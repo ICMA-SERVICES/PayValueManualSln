@@ -1,10 +1,13 @@
 ﻿using AutoMapper;
 using Dapper;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using PayValueManualSln.Application;
 using PayValueManualSln.Application.DTOs;
+using PayValueManualSln.Application.DTOs.Assesment;
 using PayValueManualSln.Application.DTOs.RateDto;
 using PayValueManualSln.Application.Enums;
 using PayValueManualSln.Application.Interfaces;
@@ -12,6 +15,7 @@ using PayValueManualSln.Application.Wrappers;
 using PayValueManualSln.Domain.Entities;
 using PayValueManualSln.Domain.Entities.Settings;
 using PayValueManualSln.Infrastructure.Persistence.Contexts;
+using PayValueManualSln.Infrastructure.Persistence.HangFireSerivces;
 using PayValueManualSln.Persistence.Helpers;
 using PayValueManualSln.Persistence.Services;
 using PayValueManualSln.Shared.DapperServices;
@@ -40,9 +44,12 @@ namespace PayValueManualSln.Persistence.Repositories
         private readonly RateServices _rateservice;
         private readonly IDapper _dapper;
         private readonly IAuditRepository _audit;
+        private readonly IAccountService _accountService;
+        private readonly IcmaCollectionContext _icmaContext;
+        private readonly IHttpClientHelperService _genericHttpClientHandlerService;
         public Appsettings _appsettings { get; }
 
-        public EntityMangerAsync(ApplicationDbContext context, IAuditRepository audit,IOptions<Appsettings> appsettings, IDapper dapper ,ILogger logger, IConfiguration config, IHttpClientHelperService httpClientHelperService, IMapper mapper, IAuthenticatedUserService authenticatedUserService, HttpClient httpClient, RateServices rateServices)
+        public EntityMangerAsync(ApplicationDbContext context,IHttpClientHelperService clientHelperService, IAuditRepository audit, IOptions<Appsettings> appsettings, IDapper dapper, ILogger logger, IConfiguration config, IHttpClientHelperService httpClientHelperService, IMapper mapper, IAuthenticatedUserService authenticatedUserService, HttpClient httpClient, RateServices rateServices,IAccountService accountService, IcmaCollectionContext icmacontext)
         {
             _context = context;
             _logger = logger;
@@ -56,6 +63,9 @@ namespace PayValueManualSln.Persistence.Repositories
             _dapper = dapper;
             _appsettings = appsettings.Value;
             _audit = audit;
+            _accountService = accountService;
+            _icmaContext = icmacontext;
+            _httpClientHelperService = httpClientHelperService;
         }
 
         public async Task<string> GenerateStinAsync(string username, int id)
@@ -482,7 +492,7 @@ namespace PayValueManualSln.Persistence.Repositories
                 var isForAllZones = await _rateservice.CheckIsForAllZones(request.ServiceId);
                 var rates = await _rateservice.GetRate(request.ServiceId, request.LocationId, request.ZoneId, isForAllZones, request.TypeId);
                 foreach (var rateItem in rates)
-                {   
+                {
                     var rate = new Rate();
                     //check if this revenue requires formula
                     if (rateItem.IsAmountAutomatic == false || rateItem.IsAmountAutomatic == null)
@@ -569,7 +579,7 @@ namespace PayValueManualSln.Persistence.Repositories
             }
         }
 
-       
+
 
         private bool IsRenewalRequired(long serviceRevenueId)
         {
@@ -578,7 +588,7 @@ namespace PayValueManualSln.Persistence.Repositories
 
         public async Task<Response<string>> CalculateRenewalDate(long? billDetailId = null)
         {
-             var response = new Response<string>();
+            var response = new Response<string>();
             try
             {
                 var renewableAssessments = new List<AssessmentRenewalDto>();
@@ -668,9 +678,9 @@ namespace PayValueManualSln.Persistence.Repositories
                         response.Message = "Sucessful";
                         response.Succeeded = true;
                     }
-                     response.Message = "Unsucessful";
+                    response.Message = "Unsucessful";
                 }
-                 response.Message = "No record to process";
+                response.Message = "No record to process";
                 return response;
             }
             catch (Exception ex)
@@ -861,14 +871,838 @@ namespace PayValueManualSln.Persistence.Repositories
             catch (Exception ex)
             {
                 _logger.Error(ex.Message, "An error has occurred on MapServiceToType, PayValue Repository");
-                
+
             }
             return response;
         }
-       
-       
+        public async Task<Response<List<BillInfoDto>>> GetAllAssessmentsAsync(int? year, AssessmentStatus assessmentStatus = AssessmentStatus.All)
+        {
+            var response = new Response<List<BillInfoDto>>();
+            year = year == null ? (int)DateTime.UtcNow.Year : year;
+            var bills = new List<BillInfo>();
+            if (assessmentStatus == AssessmentStatus.All)
+            {
+                bills = await _context.BillInfo.Where(x => x.AgencyCode.TrimEnd().ToLower() == _authenticatedUser.AgencyCode.TrimEnd().ToLower() && x.IsDeleted != true && x.CreatedOn.Year == year).ToListAsync();
+            }
+            if (assessmentStatus == AssessmentStatus.Approved)
+            {
+                bills = await _context.BillInfo
+                    .Where(x => x.AgencyCode.TrimEnd().ToLower() == _authenticatedUser.AgencyCode.TrimEnd().ToLower() && x.IsApproved == true && !string.IsNullOrEmpty(x.PaymentCode) && !string.IsNullOrEmpty(x.BaseNumber) && x.IsDeleted != true && !x.IsExpired && x.IsReversed != true && x.CreatedOn.Year == year)
+                    .ToListAsync();
+            }
+            if (assessmentStatus == AssessmentStatus.Expired)
+            {
+                bills = await _context.BillInfo.Where(x => x.AgencyCode.TrimEnd().ToLower() == _authenticatedUser.AgencyCode.TrimEnd().ToLower() && x.IsExpired && x.CreatedOn.Year == year).ToListAsync();
+            }
+            if (assessmentStatus == AssessmentStatus.Disapproved)
+            {
+                bills = await _context.BillInfo.Where(x => x.AgencyCode.TrimEnd().ToLower() == _authenticatedUser.AgencyCode.TrimEnd().ToLower() && x.IsApproved == false && x.IsDeleted != true && x.CreatedOn.Year == year).ToListAsync();
+            }
+            if (assessmentStatus == AssessmentStatus.Pending)
+            {
+                bills = await _context.BillInfo.Where(x => x.AgencyCode.TrimEnd().ToLower() == _authenticatedUser.AgencyCode.TrimEnd().ToLower() && x.IsApproved == null && string.IsNullOrEmpty(x.PaymentCode) && !string.IsNullOrEmpty(x.BaseNumber) && x.IsDeleted != true && x.CreatedOn.Year == year).ToListAsync();
+            }
+            if (assessmentStatus == AssessmentStatus.PendingPayCode)
+            {
+                bills = await _context.BillInfo.Where(x => x.AgencyCode.TrimEnd().ToLower() == _authenticatedUser.AgencyCode.TrimEnd().ToLower() && x.IsApproved == true && string.IsNullOrEmpty(x.PaymentCode) && !string.IsNullOrEmpty(x.BaseNumber) && x.IsDeleted != true).ToListAsync();
+            }
 
+            try
+            {
+                var responses = new List<BillInfoDto>();
+                if (bills.Count > 0)
+                {
+                    responses = bills.Select(x => new BillInfoDto
+                    {
+                        PayerName = x.PayerName,
+                        CreatedOn = x.CreatedOn,
+                        ApprovedOn = x.ApprovedOn,
+                        PaymentCode = x.PaymentCode,
+                        PayerUtin = x.PayerUtin,
+                        BaseNumber = x.BaseNumber,
+                        IsApproved = x.IsApproved,
+                        AgencyCode = x.AgencyCode,
+                        TotalBillAmount = x.TotalBillAmount,
+                        BillId = x.BillId,
+                        ServiceName = x.ServiceName,
+                        CreatedById = x.CreatedById,
+                        ServiceId = (long)x.ServiceId,
+                        IsStandardLetterRequired = x.ServiceId != null
+                            ? _context.Services.FirstOrDefault(s => s.Id == x.ServiceId)?.IsStandardLetterRequired ?? false
+                            : false,
+                        Id = x.Id,
+                        CreatedBy = !string.IsNullOrEmpty(x.CreatedById)
+                            ? _accountService.GetUserById(x.CreatedById)?.Data != null
+                                ? $"{_accountService.GetUserById(x.CreatedById).Data.FirstName} {_accountService.GetUserById(x.CreatedById).Data.LastName}"
+                                : null
+                            : null,
+                        ApprovedBy = !string.IsNullOrEmpty(x.ApprovedBy)
+                        ? _accountService.GetUserById(x.ApprovedBy)?.Data != null
+                        ? $"{_accountService.GetUserById(x.ApprovedBy).Data.FirstName} {_accountService.GetUserById(x.ApprovedBy).Data.LastName}"
+                        : null
+                        : null,
+                    }).ToList();
+                }
+                response.Data = responses;
+                response.Succeeded = true;
+                response.Message = "Assessment retrieved successfully.";
+                return response;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+
+        }
+
+        public async Task<Response<List<BillInfoDto>>> GetAssessmentPendingApprovalByUserIdAsync()
+        {
+            var response = new Response<List<BillInfoDto>>();
+            var approvalSetting = await _context.ModuleApprovalConfig.FirstOrDefaultAsync(x => x.AgencyCode == _authenticatedUser.AgencyCode);
+            if (approvalSetting != null)
+            {
+                if (approvalSetting.IsApprovalForGeneralValidators == false)
+                {
+                    var initiatorsMappedToUser = await _context.MapUserApproval.Where(x => x.ValidatorId == _authenticatedUser.UserId && x.AgencyCode.TrimEnd().ToLower() == _authenticatedUser.AgencyCode.TrimEnd().ToLower()).ToListAsync();
+                    var userBills = new List<BillInfoDto>();
+                    foreach (var item in initiatorsMappedToUser)
+                    {
+                        var records = await _context.BillInfo.Where(x => x.AgencyCode.TrimEnd().ToLower() == _authenticatedUser.AgencyCode.TrimEnd().ToLower() && x.IsApproved == null && x.CreatedById == item.InitiatorId)
+                            .Include(x => x.BillDetails)
+                            .Select(x => new BillInfoDto
+                            {
+                                ServiceName = x.BillDetails.FirstOrDefault().ServiceName,
+                                TypeName = x.BillDetails.FirstOrDefault().TypeName,
+                                Location = x.BillDetails.FirstOrDefault().LocationName,
+                                Zone = x.BillDetails.FirstOrDefault().ZoneName,
+                                PayerName = x.PayerName,
+                                PayerUtin = x.PayerUtin,
+                                TotalBillAmount = x.TotalBillAmount,
+                                CreatedOn = x.CreatedOn,
+                                Id = x.Id,
+                                BillId = x.BillId,
+                                TotalAssessed = x.TotalAssessed
+                            }).ToListAsync();
+                        userBills.AddRange(records);
+                    }
+                    response.Data = userBills;
+                    response.Message = "Pending assessments retrieved successfully.";
+                    response.Succeeded = true;
+                    return response;
+                }
+            }
+            var bills = await _context.BillInfo.Where(x => x.AgencyCode.TrimEnd().ToLower() == _authenticatedUser.AgencyCode.TrimEnd().ToLower() && x.IsApproved == null)
+                            .Include(x => x.BillDetails)
+                            .Select(x => new BillInfoDto
+                            {
+                                ServiceName = x.BillDetails.FirstOrDefault().ServiceName,
+                                TypeName = x.BillDetails.FirstOrDefault().TypeName,
+                                Location = x.BillDetails.FirstOrDefault().LocationName,
+                                Zone = x.BillDetails.FirstOrDefault().ZoneName,
+                                PayerName = x.PayerName,
+                                PayerUtin = x.PayerUtin,
+                                TotalBillAmount = x.TotalBillAmount,
+                                CreatedOn = x.CreatedOn,
+                                Id = x.Id,
+                                BillId = x.BillId,
+                                TotalAssessed = x.TotalAssessed
+                            }).ToListAsync();
+            response.Message = "Pending assessments retrieved successfully.";
+            response.Succeeded = true;
+            response.Data = bills;
+            return response;
+           }
+
+        public async Task<Response<string>> ApproveAssessmentAsync(AssessmentApprovalRequest request)
+        {
+            var response = new Response<string>();
+            try
+            {
+                var bill = await _context.BillInfo
+                    .Include(x => x.BillDetails)
+                    .FirstOrDefaultAsync(x => x.Id == request.AssessmentId && x.AgencyCode.TrimEnd().ToLower() == _authenticatedUser.AgencyCode.TrimEnd().ToLower());
+                if (bill == null)
+                {
+                    response.Succeeded = false;
+                    response.Message = "Record was not found";
+                }
+                else if (bill.IsApproved == true)
+                {
+                    response.Succeeded = false;
+                    response.Message = "This assessment has already been approved";
+                }
+                else
+                {
+                    bill.IsApproved = request.IsApproved;
+                    bill.DissaprovalComment = request.Comment;
+                    bill.ApprovedBy = _authenticatedUser.UserId;
+                    bill.ApprovedOn = DateTime.Now;
+
+                    _context.BillInfo.Update(bill);
+                    var update = await _context.SaveChangesAsync();
+                    if (update > 0)
+                    {
+                        //Check if merchant required external payment code generation, if yes proceed to do below else skip
+                        var merchantRequireExternalPaymentCode = await _context.Agency.AnyAsync(x => x.Code == bill.AgencyCode && x.ExternalPaymentCodeRequired == true);
+                        if (merchantRequireExternalPaymentCode)
+                        {
+                            //Proceed to generate payment code from external provider as its required using hangfire job
+                            BackgroundJob.Enqueue<ServiceScheduler>(x => x.GenerateExternalPaymentCodeAsync(bill.BaseNumber, false));
+                        }
+                        if (request.IsApproved)
+                        {
+                            foreach (var item in bill.BillDetails)
+                            {
+                                if (item.IsDepositRequired == true)
+                                {
+                                    var depositOnConsent = await _context.DepositOnConsents.FirstOrDefaultAsync(x => x.PaymentRefNumber == item.PaymentReferenceNum);
+                                    if (depositOnConsent != null)
+                                    {
+                                        depositOnConsent.IsUsed = true;
+                                        depositOnConsent.InUse = false;
+                                        _context.DepositOnConsents.Update(depositOnConsent);
+                                    }
+                                    //DEBT: This needs to be accessed using the ICMA collction service
+                                    var collectionRevenueInfo = await _icmaContext.CollectionReports.FirstOrDefaultAsync(c => c.PaymentRefNumber == item.PaymentReferenceNum && c.IsReversed == false);
+                                    if (collectionRevenueInfo != null)
+                                    {
+                                        if (collectionRevenueInfo != null)
+                                        {
+                                            collectionRevenueInfo.AmountUsed = Math.Abs((decimal)item.Liability);
+                                            collectionRevenueInfo.IsUsed = true;
+                                            _icmaContext.CollectionReports.Update(collectionRevenueInfo);
+                                        }
+                                    }
+                                    await _context.SaveChangesAsync();
+                                }
+                            }
+                        }
+                        //Background job (Hangfire) is fired at this point to send to assessment repository
+                        BackgroundJob.Enqueue<ServiceScheduler>(x => x.SendAssessmentToRepository(bill.BaseNumber));
+                        response.Succeeded = true;
+                        response.Message = "Assessment was approved successfully";
+                    }
+                    else
+                    {
+                        response.Succeeded = false;
+                        response.Message = "Assessment was not approved";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.Write(ex.Message.ToString());
+                Log.Error(ex.Message, "An error has occured on ApproveAssessment, Payvalue Repository");
+                response.Succeeded = false;
+                response.Message = "An error occurred while processing your request";
+            }
+            return response;
+        }
+        public async Task<MessageClass> GenerateExternalPaymentCode(string baseNumber, bool? updateBill = false, CancellationToken cancellationToken = default)
+        {
+            var bc = new MessageClass();
+            var response = new List<DemandNoticeDetails>();
+            var billDetails = new List<BillDetails>();
+
+            try
+            {
+                var assessResult = await _context.BillInfo.Where(x => x.BaseNumber == baseNumber && (x.IsAdditionalAssessmentRequired == false || x.IsAdditionalAssessmentRequired == null) && x.MergerRequestId == null && (x.IsDeleted == null || x.IsDeleted == false) && (x.IsReversed == false || x.IsReversed == null) && x.IsApproved == true)
+               .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+                if (!assessResult.Any())
+                {
+                    bc.StatusId = -1;
+                    bc.StatusMessage = $"No record found for Base Number {baseNumber}";
+                    _logger.Information(JsonConvert.SerializeObject(bc));
+                    return bc;
+                }
+                if (assessResult.Any())
+                {
+                    billDetails = await _context.BillDetails.Where(x => x.BillInfoGuid == assessResult.First().BillId).ToListAsync();
+                    response.AddRange(billDetails.Select(invoiceDetails => new DemandNoticeDetails
+                    { amount = (double)invoiceDetails.TotalBillAmount, name = invoiceDetails.RevenueName, revenue_code = invoiceDetails.RevenueCode }));
+
+                }
+
+                var assessDetailsResultFirstDefault = assessResult.FirstOrDefault();
+                var bPMSPaymentCodeRequest = new BPMSPaymentCodeRequest();
+                BMPSMessageClass serviceResponse = new BMPSMessageClass();
+                if (updateBill == true)
+                {
+                    bPMSPaymentCodeRequest = new BPMSPaymentCodeRequest
+                    {
+                        customer_first_name = assessDetailsResultFirstDefault.PayerName,
+                        customer_last_name = assessDetailsResultFirstDefault.PayerName,
+                        customer_email = string.IsNullOrEmpty(assessDetailsResultFirstDefault.Email) || !HelpersClasses.IsEmailValid(assessDetailsResultFirstDefault.Email) ? "payvalue@icmaservices.com" : assessDetailsResultFirstDefault.Email,
+                        customer_phone = string.IsNullOrEmpty(assessDetailsResultFirstDefault.Telephone) || !HelpersClasses.IsPhoneNumberValid(assessDetailsResultFirstDefault.Telephone) ? "11111111111" : assessDetailsResultFirstDefault.Telephone,
+                        customer_address = string.IsNullOrWhiteSpace(assessDetailsResultFirstDefault.Address) ? "Not provided" : assessDetailsResultFirstDefault.Address,
+                        bill_description = assessDetailsResultFirstDefault.ServiceName,
+                        billed_amount = (double)response.Sum(x => x.amount),
+                        overwrite_existing = true,
+                        payment_code = assessDetailsResultFirstDefault.PaymentCode,
+                        service_id = (int)_context.Services.Where(x => x.Id == assessDetailsResultFirstDefault.ServiceId).FirstOrDefault().ExternalServiceId,
+                        request_id = baseNumber,
+                        demand_notices = response
+                    };
+                    serviceResponse = await _genericHttpClientHandlerService.PostAsync<BPMSPaymentCodeRequest, BMPSMessageClass>($"{_appsettings.BPMSGateWayServiceUrl}{ApplicationConstants.UpdateBillingUrl}", bPMSPaymentCodeRequest);
+
+                }
+                else
+                {
+                    bPMSPaymentCodeRequest = new BPMSPaymentCodeRequest
+                    {
+                        customer_first_name = assessDetailsResultFirstDefault.PayerName,
+                        customer_last_name = assessDetailsResultFirstDefault.PayerName,
+                        customer_address = string.IsNullOrWhiteSpace(assessDetailsResultFirstDefault.Address) ? "Not provided" : assessDetailsResultFirstDefault.Address,
+                        customer_email = string.IsNullOrEmpty(assessDetailsResultFirstDefault.Email) || !HelpersClasses.IsEmailValid(assessDetailsResultFirstDefault.Email) ? "payvalue@icmaservices.com" : assessDetailsResultFirstDefault.Email,
+                        customer_phone = string.IsNullOrEmpty(assessDetailsResultFirstDefault.Telephone) || !HelpersClasses.IsPhoneNumberValid(assessDetailsResultFirstDefault.Telephone) ? "11111111111" : assessDetailsResultFirstDefault.Telephone,
+                        bill_description = assessDetailsResultFirstDefault.ServiceName,
+                        billed_amount = (double)response.Sum(x => x.amount),
+                        overwrite_existing = false,
+                        service_id = (int)_context.Services.Where(x => x.Id == assessDetailsResultFirstDefault.ServiceId).FirstOrDefault().ExternalServiceId,
+                        request_id = baseNumber,
+                        demand_notices = response
+                    };
+                    serviceResponse = await _genericHttpClientHandlerService.PostAsync<BPMSPaymentCodeRequest, BMPSMessageClass>($"{_appsettings.BPMSGateWayServiceUrl}{ApplicationConstants.CreateBillingUrl}", bPMSPaymentCodeRequest);
+
+                }
+                var msg = $"Record to be send to BPMS through GenerateExternalPaymentCode Method :- {JsonConvert.SerializeObject(bPMSPaymentCodeRequest)}";
+                _logger.Information(msg);
+
+                if (serviceResponse != null && serviceResponse.status == true && serviceResponse.status_code == 200)
+                {
+                    var validAssessment = assessResult.FirstOrDefault();
+                    validAssessment.PaymentCode = serviceResponse.data.payment_code;
+                    validAssessment.ExternalResponseDate = DateTime.Now;
+                    validAssessment.ExternalResponseJson = JsonConvert.SerializeObject(serviceResponse);
+                    _context.BillInfo.Update(validAssessment);
+                    await _context.SaveChangesAsync();
+                    //var updateList = new List<BillDetails>();
+                    foreach (var item in serviceResponse.data.demand_notices)
+                    {
+                        var billDetailToUpdate = await _context.BillDetails.FirstOrDefaultAsync(x => x.RevenueCode == item.revenue_code);
+                        if (billDetailToUpdate != null)
+                        {
+                            billDetailToUpdate.ItemPaymentCode = item.revenue_item_reference;
+                            _context.BillDetails.Update(billDetailToUpdate);
+                            await _context.SaveChangesAsync();
+
+                        }
+                    }
+                    bc.StatusId = 1;
+                    bc.StatusMessage = $"{serviceResponse.message} for Base No. {baseNumber}";
+                    _logger.Information(JsonConvert.SerializeObject(bc));
+                }
+                if (serviceResponse != null && serviceResponse.status == false)
+                {
+                    bc.StatusId = -1;
+                    bc.StatusMessage = $"{serviceResponse.message} for Base. No. {baseNumber}";
+                    _logger.Information(JsonConvert.SerializeObject(bc));
+                }
+                if (serviceResponse == null)
+                {
+                    bc.StatusId = -1;
+                    bc.StatusMessage = $"BPMS Service Return Null Value For Base. No. {baseNumber}";
+                    _logger.Information(JsonConvert.SerializeObject(bc));
+                }
+            }
+            catch (Exception ex)
+            {
+                var errorMsg = ex.Message.ToString();
+                bc.StatusId = -1;
+                bc.StatusMessage = ex.Message;
+                Log.Error(ex.InnerException == null ? $"Error occurred while processing your request at {nameof(GenerateExternalPaymentCode)}" : ex.InnerException.Message);
+                return bc;
+            }
+
+            return bc;
+        }
+        public async Task<MessageClass> GenerateExternalPaymentCodeForPendingAssessment(CancellationToken cancellationToken = default)
+        {
+            var bc = new MessageClass();
+            var response = new List<DemandNoticeDetails>();
+            var assessDetailsResult = new List<BillInfo>();
+
+            try
+            {
+                //
+                var allAgencies = await _context.Agency.ToListAsync();
+                if (allAgencies.Any())
+                {
+                    foreach (var item in allAgencies)
+                    {
+                        if (item.ExternalPaymentCodeRequired != true)
+                        {
+                            bc.StatusId = -1;
+                            bc.StatusMessage = $"Agency {item.Code} does not require an external payment code generation";
+                            _logger.Information(JsonConvert.SerializeObject(bc));
+                            return bc;
+                        }
+
+                        var assessResult = await _context.BillInfo.Where(x => x.PaymentCode == null && x.AgencyCode == item.Code && x.IsAdditionalAssessmentRequired == false && x.MergerRequestId == null && (x.IsDeleted == null || x.IsDeleted == false) && (x.IsReversed == false || x.IsReversed == null) && x.IsApproved == true)
+                 .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+                        if (!assessResult.Any())
+                        {
+                            bc.StatusId = -1;
+                            bc.StatusMessage = $"No pending bill waiting for external payment code for this agency {item.Code}";
+                            _logger.Information(JsonConvert.SerializeObject(bc));
+                            return bc;
+                        }
+                        if (assessResult.Any())
+                        {
+                            var billDetails = await _context.BillDetails.Where(x => x.BillInfoGuid == assessResult.First().BillId).ToListAsync();
+                            response.AddRange(billDetails.Select(invoiceDetails => new DemandNoticeDetails
+                            { amount = (double)invoiceDetails.TotalBillAmount, name = invoiceDetails.RevenueName, revenue_code = invoiceDetails.RevenueCode }));
+
+                        }
+
+                        var assessDetailsResultFirstDefault = assessResult.FirstOrDefault();
+                        var bPMSPaymentCodeRequest = new BPMSPaymentCodeRequest();
+
+                        bPMSPaymentCodeRequest = new BPMSPaymentCodeRequest
+                        {
+                            customer_first_name = assessDetailsResultFirstDefault.PayerName,
+                            customer_last_name = assessDetailsResultFirstDefault.PayerName,
+                            customer_address = string.IsNullOrEmpty(assessDetailsResultFirstDefault.Address) ? "Not provided" : assessDetailsResultFirstDefault.Address,
+                            customer_email = string.IsNullOrEmpty(assessDetailsResultFirstDefault.Email) || !HelpersClasses.IsEmailValid(assessDetailsResultFirstDefault.Email) ? "payvalue@icmaservices.com" : assessDetailsResultFirstDefault.Email,
+                            customer_phone = string.IsNullOrEmpty(assessDetailsResultFirstDefault.Telephone) || !HelpersClasses.IsPhoneNumberValid(assessDetailsResultFirstDefault.Telephone) ? "11111111111" : assessDetailsResultFirstDefault.Telephone,
+                            bill_description = assessDetailsResultFirstDefault.ServiceName,
+                            billed_amount = (double)assessDetailsResultFirstDefault.TotalBillAmount,
+                            overwrite_existing = false,
+                            service_id = (int)_context.Services.Where(x => x.Id == assessDetailsResultFirstDefault.ServiceId).FirstOrDefault().ExternalServiceId,
+                            request_id = assessResult.First().BaseNumber,
+                            demand_notices = response
+                        };
+
+                        var msg = $"Record to be send to BPMS through GenerateExternalPaymentCode Method :- {JsonConvert.SerializeObject(bPMSPaymentCodeRequest)}";
+                        _logger.Information(msg);
+
+                        var serviceResponse = await _genericHttpClientHandlerService.PostAsync<BPMSPaymentCodeRequest, BMPSMessageClass>($"{_appsettings.BPMSGateWayServiceUrl}{ApplicationConstants.CreateBillingUrl}", bPMSPaymentCodeRequest);
+
+                        if (serviceResponse != null && serviceResponse.status == true && serviceResponse.status_code == 200)
+                        {
+                            var validAssessment = assessDetailsResultFirstDefault;
+                            validAssessment.PaymentCode = serviceResponse.data.payment_code;
+                            validAssessment.ExternalResponseDate = DateTime.Now;
+                            validAssessment.ExternalResponseJson = JsonConvert.SerializeObject(serviceResponse);
+                            _context.BillInfo.Update(validAssessment);
+                            await _context.SaveChangesAsync();
+                            foreach (var notice in serviceResponse.data.demand_notices)
+                            {
+                                var billDetailToUpdate = await _context.BillDetails.FirstOrDefaultAsync(x => x.RevenueCode == notice.revenue_code);
+                                if (billDetailToUpdate != null)
+                                {
+                                    billDetailToUpdate.ItemPaymentCode = notice.revenue_item_reference;
+                                    _context.BillDetails.Update(billDetailToUpdate);
+                                    await _context.SaveChangesAsync();
+
+                                }
+                            }
+                            await _context.SaveChangesAsync();
+
+                            bc.StatusId = 1;
+                            bc.StatusMessage = $"{serviceResponse.message} for Base No. {assessResult.First().BaseNumber}";
+                            _logger.Information(JsonConvert.SerializeObject(bc));
+                        }
+                        if (serviceResponse != null && serviceResponse.status == false)
+                        {
+                            bc.StatusId = -1;
+                            bc.StatusMessage = $"{serviceResponse.message} for Base. No. {assessResult.First().BaseNumber}";
+                            _logger.Information(JsonConvert.SerializeObject(bc));
+                        }
+                        if (serviceResponse == null)
+                        {
+                            bc.StatusId = -1;
+                            bc.StatusMessage = $"BPMS Service Return Null Value For Base. No. {assessResult.First().BaseNumber}";
+                            _logger.Information(JsonConvert.SerializeObject(bc));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var errorMsg = ex.Message.ToString();
+                bc.StatusId = -1;
+                bc.StatusMessage = ex.InnerException == null ? $"Error occurred while processing your request at {nameof(GenerateExternalPaymentCode)}" : ex.InnerException.Message;
+                Log.Error(bc.StatusMessage);
+                return bc;
+            }
+
+            return bc;
+        }
+        public async Task<MessageClass> WithDrawExternalPaymentCodeAsync(string formerBaseNumber, CancellationToken cancellationToken = default)
+        {
+            var bc = new MessageClass();
+            BMPSMessageClass serviceResponse = new BMPSMessageClass();
+
+            try
+            {
+                var assessResult = await _context.BillInfo.Where(x => x.BaseNumber == formerBaseNumber && (x.IsAdditionalAssessmentRequired == false || x.IsAdditionalAssessmentRequired == null) && x.MergerRequestId == null && x.IsDeleted == true && x.IsApproved == true && x.IsReversed == true)
+               .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+                if (assessResult == null)
+                {
+                    bc.StatusId = -1;
+                    bc.StatusMessage = $"No record found for Base Number {formerBaseNumber}";
+                    _logger.Information(JsonConvert.SerializeObject(bc));
+                    return bc;
+                }
+
+                var request = new BPMSWithdrawBillRequest
+                {
+                    payment_code = assessResult.PaymentCode
+                };
+
+                serviceResponse = await _genericHttpClientHandlerService.PostAsync<BPMSWithdrawBillRequest, BMPSMessageClass>($"{_appsettings.BPMSGateWayServiceUrl}{ApplicationConstants.WithdrawBillingUrl}", request);
+
+                var msg = $"Bill to be withdraw through WithDrawExternalPaymentCodeAsync Method :- {JsonConvert.SerializeObject(request)}";
+                _logger.Debug(msg);
+
+                if (serviceResponse != null && serviceResponse.status == true && serviceResponse.status_code == 200)
+                {
+                    assessResult.IsBillWithdrawn = serviceResponse.status;
+                    assessResult.BillWithdrawnOn = DateTime.Now;
+                    _context.BillInfo.Update(assessResult);
+                    await _context.SaveChangesAsync();
+                    bc.StatusId = 1;
+                    bc.StatusMessage = $"{serviceResponse.message} for Base No. {formerBaseNumber}";
+                    _logger.Information(JsonConvert.SerializeObject(bc));
+                }
+                if (serviceResponse != null && serviceResponse.status == false)
+                {
+                    bc.StatusId = -1;
+                    bc.StatusMessage = $"{serviceResponse.message} for Base. No. {formerBaseNumber}";
+                    _logger.Information(JsonConvert.SerializeObject(bc));
+                }
+                if (serviceResponse == null)
+                {
+                    bc.StatusId = -1;
+                    bc.StatusMessage = $"BPMS Service Return Null Value For Base. No. {formerBaseNumber}";
+                    _logger.Information(JsonConvert.SerializeObject(bc));
+                }
+            }
+            catch (Exception ex)
+            {
+                var errorMsg = ex.Message.ToString();
+                bc.StatusId = -1;
+                bc.StatusMessage = ex.Message;
+                Log.Error(ex.InnerException == null ? $"Error occurred while processing your request at {nameof(GenerateExternalPaymentCode)}" : ex.InnerException.Message);
+                return bc;
+            }
+
+            return bc;
+        }
+        public async Task<Response<string>> SendToAssessmentRepository(string baseNumber = null)
+        {
+            var response = new Response<string>();
+            try
+            {
+                var list = new List<BillInfo>();
+                if (string.IsNullOrEmpty(baseNumber))
+                {
+                    list = await _context.BillInfo
+                        .Where(x => x.IsSentToAssessmentRepository == false && x.IsApproved == true)
+                        .Take(100)
+                        .ToListAsync();
+                }
+                else
+                {
+                    list = await _context.BillInfo
+                        .Where(x => x.IsSentToAssessmentRepository == false && x.BaseNumber == baseNumber && x.IsApproved == true)
+                        .ToListAsync();
+                }
+                if (list.Count > 0)
+                {
+                    var merchantRequireExternalPaymentCode = await _context.Agency.AnyAsync(x => x.Code == _authenticatedUser.AgencyCode && x.ExternalPaymentCodeRequired == true);
+                    if (!merchantRequireExternalPaymentCode)
+                    {
+                        foreach (var item in list)
+                        {
+                            var billDetails = await _context.BillDetails
+                                .Where(b => b.BillInfoGuid == item.BillId)
+                                .ToListAsync();
+
+                            var invoiceDetail = billDetails
+                                .Select(x => new InvoiceDetails
+                                {
+                                    RevenueCode = x.RevenueCode,
+                                    ItemAmount = (decimal)x.BillAmount,
+                                    ItemArrears = x.Liability == null ? 0 : x.Liability,
+                                    Narration = x.ServiceName,
+                                    ItemPaymentCode = x.ItemPaymentCode,
+                                    ItemTransactionId = x.BaseNumberItemRefNo
+                                }).ToList();
+
+                            var location = !string.IsNullOrEmpty(billDetails.FirstOrDefault().LocationName) ? billDetails.FirstOrDefault().LocationName : _appsettings.MerchantCode;
+                            var repoRequest = new GenerateInvoiceRequest
+                            {
+                                TransactionId = item.BaseNumber,
+                                PayerId = item.PayerUtin,
+                                PayerName = item.PayerName,
+                                PayerEmail = item.Email,
+                                Telephone = item.Telephone,
+                                PaymentPeriod = item.CreatedOn.Year.ToString(),
+                                Address = item.Address,
+                                TotalAmount = (decimal)billDetails.Sum(x => x.TotalBillAmount),
+                                Arrears = 0M,
+                                Narration = $"Online Direct Assessment Invoice",
+                                Location = location,
+                                InvoiceYear = item.CreatedOn.Year.ToString(),
+                                PlatformCode = _appsettings.PlatformCode,
+                                RaisedBy = $"{item.PayerName} <{item.Email}>",
+                                RaisedOn = item.CreatedOn,
+                                ApprovedBy = item?.ApprovedBy != null ? $"{_accountService.GetUserById(item.ApprovedBy)?.Data?.FirstName} {_accountService.GetUserById(item.ApprovedBy)?.Data?.LastName}" : "Agency Admin",
+                                ApprovedOn = item.ApprovedOn == null ? item.CreatedOn : item.ApprovedOn,
+                                UpdatePreviousInvoice = false,
+                                ItemCount = billDetails.Count,
+                                AsExpiryDate = false,
+                                PreviousYearAssessmentRefNo = null,
+                                RevenueCode = _appsettings.UnclassifiedRevenueCode,
+                                InvoiceDetails = invoiceDetail,
+                                PaymentCode = item.PaymentCode
+                            };
+                            var json = JsonConvert.SerializeObject(repoRequest);
+                            var responses = await _genericHttpClientHandlerService.PostAsync<GenerateInvoiceRequest, Response<ExternalApiResponseDto<SendAssessmentToRepositoryResponseData>>>($"{_appsettings.AssessmentRepoServiceBaseUrl}{_appsettings.GenerateInvoiceNoMethod}", repoRequest);
+
+                            if (response != null && response.Succeeded)
+                            {
+                                item.IsSentToAssessmentRepository = true;
+
+                                _context.BillInfo.Update(item);
+                                await _context.SaveChangesAsync();
+                            }
+                        }
+
+                        return ApplicationConstants.SuccessMessage("Update was successful");
+                    }
+                    else
+                    {
+                        foreach (var item in list)
+                        {
+                            var billDetails = await _context.BillDetails
+                                .Where(b => b.BillInfoGuid == item.BillId)
+                                .ToListAsync();
+
+                            var invoiceDetail2 = billDetails
+                                .Select(x => new InvoiceDetails
+                                {
+                                    RevenueCode = x.RevenueCode,
+                                    ItemAmount = (decimal)x.TotalBillAmount,
+                                    ItemArrears = (x.TotalBillAmount) - (x.BillAmountPaid),
+                                    Narration = $"Payment for {x.RevenueName}",
+
+                                }).ToList();
+
+                            var location = !string.IsNullOrEmpty(billDetails.FirstOrDefault().LocationName) ? billDetails.FirstOrDefault().LocationName : _appsettings.MerchantCode;
+
+                            var repoRequest = new GenerateInvoiceRequest
+                            {
+                                TransactionId = item.BaseNumber,
+                                PayerId = item.PayerUtin,
+                                PayerName = item.PayerName,
+                                PayerEmail = item.Email,
+                                Telephone = item.Telephone,
+                                PaymentPeriod = item.CreatedOn.Year.ToString(),
+                                Address = item.Address,
+                                TotalAmount = (decimal)billDetails.Sum(x => x.TotalBillAmount),
+                                Arrears = 0M,
+                                Narration = $"Payment for {item.ServiceName}",
+                                Location = location,
+                                InvoiceYear = item.CreatedOn.Year.ToString(),
+                                PlatformCode = _appsettings.PlatformCode,
+                                RaisedBy = $"{item.PayerName} <{item.Email}>",
+                                RaisedOn = item.CreatedOn,
+                                ApprovedBy = item.ApprovedBy != null ? $"{_accountService.GetUserById(item.ApprovedBy).Data.FirstName} {_accountService.GetUserById(item.ApprovedBy).Data.LastName}" : "Agency Admin",
+                                ApprovedOn = item.ApprovedOn == null ? item.CreatedOn : item.ApprovedOn,
+                                UpdatePreviousInvoice = false,
+                                ItemCount = billDetails.Count,
+                                AsExpiryDate = false,
+                                PreviousYearAssessmentRefNo = null,
+                                InvoiceDetails = invoiceDetail2,
+                                RevenueCode = _appsettings.UnclassifiedRevenueCode,
+                                PaymentCode = item.PaymentCode,
+                            };
+
+                            var responses = await _genericHttpClientHandlerService.PostAsync<GenerateInvoiceRequest, Response<ExternalApiResponseDto<SendAssessmentToRepositoryResponseData>>>($"{_appsettings.AssessmentRepoServiceBaseUrl}{_appsettings.GenerateInvoiceNoMethod}", repoRequest);
+
+                            if (response != null && response.Succeeded)
+                            {
+                                item.IsSentToAssessmentRepository = true;
+                                item.PaymentCode = responses.Data.Data.InvoiceNo;
+
+                                if (string.IsNullOrEmpty(item.BaseNumber))
+                                {
+                                    item.BaseNumber = responses.Data.Data.TransactionId;
+                                    var counter = 1;
+                                    var listOfDetail = new List<BillDetails>();
+                                    foreach (var det in billDetails)
+                                    {
+                                        det.BaseNumberItemRefNo = $"{baseNumber}{counter}";
+                                        counter++;
+                                        listOfDetail.Add(det);
+                                    }
+                                    if (listOfDetail.Count > 0)
+                                    {
+                                        _context.BillDetails.UpdateRange(listOfDetail);
+                                        await _context.SaveChangesAsync();
+                                    }
+                                }
+
+                                _context.BillInfo.Update(item);
+                                await _context.SaveChangesAsync();
+                            }
+                        }
+
+                        return ApplicationConstants.SuccessMessage("Update was successful");
+                    }
+
+                }
+
+                return ApplicationConstants.NotFoundMessage("No record found");
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Error on SendToAssessmentRepository Method in PayValueRepository" + ex.InnerException == null ? ex.InnerException.Message : ex.InnerException.Message);
+                response.Message = "The Request Failed";
+            }
+            return response;
+        }
+        public async Task<Response<string>> RenewAssessments(long? billDetailId = null, bool? isManualRenewal = false)
+        {
+            var response = new Response<string>();
+            try
+            {
+                var renewableAssessments = new List<AssessmentRenewalDto>();
+                var currentYear = DateTime.Now.Year;
+
+                var query = from bd in _context.BillDetails
+                            join sr in _context.ServiceRevenue on bd.ServiceRevenueId equals sr.Id
+                            where bd.RenewalDate.HasValue
+                                  && bd.RenewalDate.Value.Year == currentYear
+                                  && (bd.IsRenewed == false || bd.IsRenewed == null)
+                                  && (bd.IsReversed == false || bd.IsReversed == null)
+                            select new AssessmentRenewalDto
+                            {
+                                IsRenewable = sr.IsRenewable,
+                                AllowAutomaticTrigger = sr.AllowAutomaticTrigger,
+                                AutomaticApproval = sr.AutomaticApproval,
+                                RenewalFrequencyId = sr.RenewalFrequencyId,
+                                IsRenewableByDate = sr.IsRenewableByDate,
+                                BillDetailId = bd.Id,
+                                AssessmentCreatedDate = bd.CreatedOn,
+                                ServiceRevenueId = sr.Id,
+                                RenewalDate = bd.RenewalDate
+                            };
+
+                if (billDetailId != null)
+                {
+                    query = query.Where(x => x.BillDetailId == billDetailId);
+                }
+                else
+                {
+                    query = query.Where(x => x.AllowAutomaticTrigger == !isManualRenewal);
+                }
+
+                renewableAssessments = await query.AsNoTracking().ToListAsync();
+
+
+                if (renewableAssessments.Count > 0)
+                {
+                    var billDetialUpdateList = new List<BillDetails>();
+                    foreach (var item in renewableAssessments)
+                    {
+                        var serviceRevenue = await _context.ServiceRevenue.FirstOrDefaultAsync(x => x.Id == item.ServiceRevenueId);
+
+                        if ((serviceRevenue.IsRenewableByDate == true && item.RenewalDate == DateTime.UtcNow.Date) || ((serviceRevenue.IsRenewableByDate == null || serviceRevenue.IsRenewableByDate == false) && item.RenewalDate.Value.Year == currentYear))
+                        {
+                            var assessmetBillDetail = await _context.BillDetails.AsNoTracking().FirstOrDefaultAsync(x => x.Id == item.BillDetailId);
+                            if (assessmetBillDetail != null)
+                            {
+                                var billInfo = await _context.BillInfo.AsNoTracking().Where(x => x.BillId == assessmetBillDetail.BillInfoGuid && (x.IsRenewed == null || x.IsRenewed == false)).FirstOrDefaultAsync();
+                                if (billInfo != null)
+                                {
+                                    var billDetailsToRenew = await _context.BillDetails.AsNoTracking().Where(x => x.BillInfoGuid == billInfo.BillId).ToListAsync();
+                                    var assesmmentToCreate = _mapper.Map<CreateAssessmentRequestDto>(billInfo);
+                                    var detailList = new List<BillDetails>();
+
+                                    assesmmentToCreate.PreviousBaseNumber = billInfo.BaseNumber;
+                                    assesmmentToCreate.PreviousPaymentCode = billInfo.PaymentCode;
+                                    if (serviceRevenue.AutomaticApproval == true)
+                                    {
+                                        assesmmentToCreate.IsApproved = true;
+                                    }
+                                    else
+                                    {
+                                        assesmmentToCreate.IsApproved = null;
+                                    }
+                                    foreach (var renewalDetail in billDetailsToRenew)
+                                    {
+                                        renewalDetail.Liability = renewalDetail.BillBalance == null ? 0 : renewalDetail.BillBalance;
+                                        renewalDetail.TotalBillAmount = (renewalDetail.Liability == null ? 0 : renewalDetail.Liability) + (renewalDetail.BillBalance == null ? 0 : renewalDetail.BillBalance);
+                                        renewalDetail.CreatedById = renewalDetail.CreatedById;
+                                        renewalDetail.PreviousItemPaymentCode = renewalDetail.ItemPaymentCode;
+                                        renewalDetail.PreviousBaseNumber = renewalDetail.BaseNumberItemRefNo;
+                                        detailList.Add(renewalDetail);
+                                    }   
+
+                                    var additionalBillDetails = await _context.BillAdditionalInfo.Where(x => x.BillInfoId == billInfo.BillId)
+                                        .Select(x => new AdditionalBillRequestDto
+                                        {
+                                            AdditionalServiceDetailId = x.AdditionalServiceDetailId,
+                                            FieldValue = x.FieldValue
+                                        }).ToListAsync();
+                                    assesmmentToCreate.AdditionalBillInfo = additionalBillDetails;
+                                    assesmmentToCreate.AgencyCode = billInfo.AgencyCode;
+                                    assesmmentToCreate.CreatedById = billInfo.CreatedById;
+                                    assesmmentToCreate.BillDetails = _mapper.Map<List<BillDetail>>(detailList);
+                                    var renew = await CreateAssessment(assesmmentToCreate);
+                                    if (renew.Succeeded)
+                                    {
+                                        var billInfoToRenew = await _context.BillInfo.FirstOrDefaultAsync(x => x.Id == billInfo.Id);
+                                        var newlySavedBillDetails = new List<BillDetails>();
+                                        if (billInfoToRenew != null)
+                                        {
+                                            newlySavedBillDetails = await _context.BillDetails.Where(x => x.BillInfoGuid == billInfoToRenew.BillId).ToListAsync();
+                                            foreach (var detail in newlySavedBillDetails)
+                                            {
+                                                detail.IsRenewed = true;
+                                                billDetialUpdateList.Add(detail);
+                                            }
+
+                                            billInfoToRenew.IsRenewed = true;
+                                            _context.Update(billInfoToRenew);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (billDetialUpdateList.Count > 0)
+                    {
+                        _context.BillDetails.UpdateRange(billDetialUpdateList);
+                        var save = await _context.SaveChangesAsync();
+                        if (save > 0)
+                        {
+                            response.Message = "Success";
+                        }
+                           
+                    }
+                    response.Message = "Unsuccessful";
+                }
+                response.Message = "No record to process";
+            }
+            catch (Exception ex)
+            {
+
+                Log.Error("Error on RenewAssessments Method in PayValueRepository" + ex.InnerException == null ? ex.InnerException.Message : ex.InnerException.Message);
+                response.Message = "Failed";
+            }
+            return response;
+        }
+    }
     }
 
-    }
+        
 

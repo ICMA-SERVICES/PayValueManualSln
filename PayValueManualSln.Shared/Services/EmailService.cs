@@ -120,7 +120,7 @@ namespace PayValueManualSln.Shared.Services
                 using (var client = new System.Net.Mail.SmtpClient(_mailMessageSettings.SmtpHost))
                 {
                     client.Port = _mailMessageSettings.SmtpPort;
-                    client.UseDefaultCredentials = true;
+                    client.UseDefaultCredentials = false;
                     client.Credentials = new NetworkCredential(_mailMessageSettings.SmtpUser, _mailMessageSettings.SmtpPass);
                     client.EnableSsl = true;
                     ServicePointManager.ServerCertificateValidationCallback = (s, certificate, chain, sslPolicyErrors) => true;

@@ -48,5 +48,7 @@ namespace PayValueV2.Domain.Entities.PayValue
 		public BillInfo BillInfo { get; set; }
         public DateTime? RenewalDate { get; set; }
         public bool? IsRenewed { get; set; } = false;
+        public string PreviousBaseNumber { get; set; } //Update for new record
+        public string PreviousItemPaymentCode { get; set; } //Update for new record
     }
 }

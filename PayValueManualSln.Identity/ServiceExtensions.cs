@@ -12,6 +12,7 @@ using PayValueManualSln.Domain.Entities.Settings;
 using PayValueManualSln.Identity;
 using PayValueManualSln.Infrastructure.Identity.Contexts;
 using PayValueManualSln.Infrastructure.Identity.Models;
+using PayValueManualSln.Infrastructure.Identity.Services;
 using System;
 using System.Text;
 
@@ -36,6 +37,7 @@ namespace PayValueManualSln.Infrastructure.Identity
             }
             services.AddIdentity<ApplicationUser, Microsoft.AspNetCore.Identity.IdentityRole>().AddEntityFrameworkStores<IdentityContext>().AddDefaultTokenProviders();       
             services.AddScoped<ICurrentUserInfoService, CurrentUserInfoService>();
+            services.AddTransient<IAccountService, AccountService>();
             services.Configure<JWTSettings>(configuration.GetSection("JWTSettings"));
             services.AddAuthentication(options =>
             {
@@ -69,15 +71,21 @@ namespace PayValueManualSln.Infrastructure.Identity
                         OnChallenge = context =>
                         {
                             context.HandleResponse();
-                            context.Response.StatusCode = 401;
-                            context.Response.ContentType = "application/json";
+                            if (!context.Response.HasStarted)
+                            {
+                                context.Response.StatusCode = 401;
+                                context.Response.ContentType = "application/json";
+                            } 
                             var result = JsonConvert.SerializeObject(new Response<string>("You are not Authorized"));
                             return context.Response.WriteAsync(result);
                         },
                         OnForbidden = context =>
                         {
-                            context.Response.StatusCode = 403;
-                            context.Response.ContentType = "application/json";
+                            if (!context.Response.HasStarted)
+                            {
+                                context.Response.StatusCode = 403;
+                                context.Response.ContentType = "application/json";
+                            }
                             var result = JsonConvert.SerializeObject(new Response<string>("You are not authorized to access this resource"));
                             return context.Response.WriteAsync(result);
                         },

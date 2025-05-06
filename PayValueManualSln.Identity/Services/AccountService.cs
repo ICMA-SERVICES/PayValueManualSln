@@ -36,7 +36,7 @@ using PayValueManualSln.Domain.Entities.Settings;
 using PayValueManualSln.Application;
 using PayValueManualSln.Application.DTOs.MenuSetup;
 
-namespace PayValueV2.Infrastructure.Identity.Services
+namespace PayValueManualSln.Infrastructure.Identity.Services
 {
     public class AccountService : IAccountService
     {

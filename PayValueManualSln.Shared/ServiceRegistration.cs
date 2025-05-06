@@ -13,6 +13,7 @@ namespace PayValueManualSln.Infrastructure.Shared
         {
             services.AddTransient<IDateTimeService, DateTimeService>();
             services.AddScoped<IDapper, DapperService>();
+            services.AddScoped<IEmailService, EmailService>();
             services.AddTransient<IHttpClientHelperService, HttpClientHelperService>();
             services.AddTransient<IAuthenticatedUserService, AuthenticatedUserService>();
         }

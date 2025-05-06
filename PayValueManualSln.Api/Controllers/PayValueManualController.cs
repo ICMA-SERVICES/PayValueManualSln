@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PayValueManualSln.Application.DTOs;
+using PayValueManualSln.Application.DTOs.Assesment;
+using PayValueManualSln.Application.Enums;
 using PayValueManualSln.Application.Helpers;
 using PayValueManualSln.Application.Interfaces;
 using PayValueManualSln.Domain.Entities;
@@ -14,58 +16,60 @@ namespace PayValueManualSln.Api.Controllers
     [ApiController]
     [Authorize]
     public class PayValueManualController : ControllerBase
-	{
-		private readonly IEntityManager _entityManager;
-		public PayValueManualController(IEntityManager entityManager)
-		{
-			_entityManager = entityManager;
-		}
-		[HttpGet("get-service")]
-		public async Task<IActionResult> GetServices(DataSourceLoadOptions loadOptions)
-		{
-			var responseList = new List<ServicesDto>();
-			var response = await _entityManager.GetServicesAsync();
-			if (response.Succeeded)
-			{
-				responseList = response.Data;
+    {
+        private readonly IEntityManager _entityManager;
+        public PayValueManualController(IEntityManager entityManager)
+        {
+            _entityManager = entityManager;
+        }
+        [HttpGet("get-service")]
+        public async Task<IActionResult> GetServices(DataSourceLoadOptions loadOptions)
+        {
+            var responseList = new List<ServicesDto>();
+            var response = await _entityManager.GetServicesAsync();
+            if (response.Succeeded)
+            {
+                responseList = response.Data;
 
-				loadOptions.PrimaryKey = new[] { $"Name" };
-				var test = DataSourceLoader.Load(responseList, loadOptions);
-				if (test.data != null)
-				{
-					return Ok(test);
-				}
-				return Ok(new { ResonseList = test, SearchResult = response });
-			}
-			else
-			{
-				return BadRequest(response);
-			};
-		}
-		[HttpGet("get-revenue")]
-		public async Task<IActionResult> GetRevenue(DataSourceLoadOptions loadOptions)
-		{
-			var responseList = new List<RevenueDto>();
-			var response = await _entityManager.GetRevenueAsync();
-			if (response.Succeeded)
-			{
-				responseList = response.Data;
+                loadOptions.PrimaryKey = new[] { $"Name" };
+                var test = DataSourceLoader.Load(responseList, loadOptions);
+                if (test.data != null)
+                {
+                    return Ok(test);
+                }
+                return Ok(new { ResonseList = test, SearchResult = response });
+            }
+            else
+            {
+                return BadRequest(response);
+            }
+            ;
+        }
+        [HttpGet("get-revenue")]
+        public async Task<IActionResult> GetRevenue(DataSourceLoadOptions loadOptions)
+        {
+            var responseList = new List<RevenueDto>();
+            var response = await _entityManager.GetRevenueAsync();
+            if (response.Succeeded)
+            {
+                responseList = response.Data;
 
-				loadOptions.PrimaryKey = new[] { $"RevenueName" };
-				var test = DataSourceLoader.Load(responseList, loadOptions);
-				if (test.data != null)
-				{
-					return Ok(test);
-				}
-				return Ok(new { ResonseList = test, SearchResult = response });
-			}
-			else
-			{
-				return BadRequest(response);
-			};
-		}
+                loadOptions.PrimaryKey = new[] { $"RevenueName" };
+                var test = DataSourceLoader.Load(responseList, loadOptions);
+                if (test.data != null)
+                {
+                    return Ok(test);
+                }
+                return Ok(new { ResonseList = test, SearchResult = response });
+            }
+            else
+            {
+                return BadRequest(response);
+            }
+            ;
+        }
         [HttpGet("get-assessment-detail")]
-        public async Task<IActionResult> GetAssessmentDetail(DataSourceLoadOptions loadOptions,string searchParameter)
+        public async Task<IActionResult> GetAssessmentDetail(DataSourceLoadOptions loadOptions, string searchParameter)
         {
             var responseList = new List<PayerCollectionDetail>();
             var searchResult = await _entityManager.GetAssessmentDetailAsync(searchParameter);
@@ -86,18 +90,18 @@ namespace PayValueManualSln.Api.Controllers
         }
 
         [HttpPost("create-bill-from-assessment")]
-		public async Task<IActionResult> CreateBillFromAssessment(int assessmentId, [FromBody] AssesmentDto requeset)
-		{
-			if (!ModelState.IsValid)
-			{
-				return BadRequest(ModelState);
-			}
-			var result = _entityManager.InsertAssessmentDataToBillTablesAsync(assessmentId);
-			return Ok(result);
-		}
-		[HttpPost("approve-payer-detail")]
+        public async Task<IActionResult> CreateBillFromAssessment(int assessmentId, [FromBody] AssesmentDto requeset)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            var result = _entityManager.InsertAssessmentDataToBillTablesAsync(assessmentId);
+            return Ok(result);
+        }
+        [HttpPost("approve-payer-detail")]
         public async Task<IActionResult> ApprovePayerDetail([FromBody] UpdatePayerRequest request)
-		{
+        {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
@@ -108,8 +112,8 @@ namespace PayValueManualSln.Api.Controllers
         }
 
         [HttpPost("send-payer-detail-to-admin")]
-		public async Task<IActionResult> SendPayerDetailToAdmin([FromBody] UpdatePayerRequest request)
-		{
+        public async Task<IActionResult> SendPayerDetailToAdmin([FromBody] UpdatePayerRequest request)
+        {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
@@ -117,7 +121,7 @@ namespace PayValueManualSln.Api.Controllers
             var result = await _entityManager.SendPayerDetialToAdminAsync(request);
             return Ok(result);
         }
-		[HttpGet("get-additional-service-detail")]
+        [HttpGet("get-additional-service-detail")]
         public async Task<IActionResult> GetAdditionalServiceDetail(DataSourceLoadOptions loadOptions)
         {
             var responseList = new List<AdditionalServiceDetailDto>();
@@ -137,13 +141,13 @@ namespace PayValueManualSln.Api.Controllers
             {
                 return BadRequest(response);
             }
-            
+
         }
-		[HttpGet("get-utin")]
+        [HttpGet("get-utin")]
         public async Task<IActionResult> GetUtin(string username, int id)
-		{ 
-		 var result = await _entityManager.GenerateStinAsync(username, id);
-			return Ok(result);
+        {
+            var result = await _entityManager.GenerateStinAsync(username, id);
+            return Ok(result);
         }
         [HttpGet("GetPendingAssessmentAsync")]
         public async Task<IActionResult> GetPendingAssessmentAsync(DataSourceLoadOptions loadOptions)
@@ -239,10 +243,68 @@ namespace PayValueManualSln.Api.Controllers
         [HttpPost("MapServiceToTypes")]
         public async Task<IActionResult> MapServiceToTypes([FromBody] List<MapServiceToTypeRequestDto> request)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
             var response = _entityManager.MapServiceToType(request);
             return Ok(response);
         }
-    }
+        [HttpGet("GetAssessments")]
+        public async Task<IActionResult> GetAssessmentsAsync(DataSourceLoadOptions loadOptions, AssessmentStatus assessmentStatus, int? year = null)
+        {
+            if (string.Equals(year.ToString(), "undefined", StringComparison.OrdinalIgnoreCase))
+            {
+                year = null;
+            }
+            var responseList = new List<BillInfoDto>();
+            var searchResult = await _entityManager.GetAllAssessmentsAsync(year, assessmentStatus);
+            if (searchResult.Succeeded)
+            {
+                responseList = searchResult.Data;
 
+                loadOptions.PrimaryKey = new[] { $"BillId" };
+                var test = DataSourceLoader.Load(responseList, loadOptions);
+                if (test.data != null)
+                {
+                    return Ok(test);
+                }
+                return Ok(new { ResonseList = test, SearchResult = searchResult });
+            }
+            else
+            {
+                return BadRequest(searchResult);
+            }
+        }
+        [HttpGet("GetAssessmentPendingApprovalByUserId")]
+        public async Task<IActionResult> GetAssessmentPendingApprovalByUserIdAsync(DataSourceLoadOptions loadOptions)
+        {
+            var responseList = new List<BillInfoDto>();
+            var searchResult = await _entityManager.GetAssessmentPendingApprovalByUserIdAsync();
+            if (searchResult.Succeeded)
+            {
+                responseList = searchResult.Data;
+
+                loadOptions.PrimaryKey = new[] { $"BillId" };
+                var test = DataSourceLoader.Load(responseList, loadOptions);
+                if (test.data != null)
+                {
+                    return Ok(test);
+                }
+                return Ok(new { ResonseList = test, SearchResult = searchResult });
+            }
+            else
+            {
+                return BadRequest(searchResult);
+            }
+        }
+        [HttpPost("ApproveAssessment")]
+        public async Task<IActionResult> ApproveAssessmentAsync([FromBody] AssessmentApprovalRequest request)
+        {
+            var response = await _entityManager.ApproveAssessmentAsync(request);
+            return Ok(response);
+        }
+
+    }
 }
 

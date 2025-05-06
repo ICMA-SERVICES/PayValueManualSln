@@ -16,15 +16,19 @@ namespace PayValueManualSln.Infrastructure.Persistence
 		{
 			services.AddDbContext<ApplicationDbContext>(options =>
 	options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+            services.AddDbContext<IcmaCollectionContext>(options =>
+                   options.UseInMemoryDatabase("IcmaCollectionDb"));
 
-			#region Repositories
-			services.AddTransient(typeof(IGenericRepositoryAsync<>), typeof(GenericRepositoryAsync<>));
+            #region Repositories
+            services.AddTransient(typeof(IGenericRepositoryAsync<>), typeof(GenericRepositoryAsync<>));
 			#endregion
 			services.AddScoped<IEntityManager, EntityMangerAsync>();
 			services.AddTransient<RateServices>();
-			services.AddTransient<IAuditRepository, AuditRepository>();	
+			services.AddTransient<IAuditRepository, AuditRepository>();
+            services.AddScoped<IMenuRepository, MenuRepository>();
+
 
 
         }
-	}
+    }
 }

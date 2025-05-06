@@ -1,4 +1,6 @@
 ﻿
+using PayValueManualSln.Domain.Common;
+using PayValueManualSln.Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -6,7 +8,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace PayValueV2.Domain.Entities.PayValue
 {
 	[Table("BillInfo", Schema = "dbo")]
-	public class BillInfo 
+	public class BillInfo :BaseEntity
 	{
 		public BillInfo()
 		{
@@ -62,13 +64,16 @@ namespace PayValueV2.Domain.Entities.PayValue
 		public double? LandSize { get; set; }
 		public double? Pages { get; set; }
 		public decimal? Value { get; set; }
-		public virtual ICollection<BillDetails> BillDetails { get; set; }
+        public bool? IsRenewed { get; set; }
 
-		//public string EntityLocation { get; set; }
-		//public string Assignee { get; set; }
-		//public string FileNo { get; set; }
-		//public string TermOfGrant { get; set; }
-		//public string PropertyOwnerEmail { get; set; }
-		//public string Salutation { get; set; }
-	}
+        public BillAdditionalInfo BillAdditionalInfo { get; set; }
+        public virtual ICollection<BillDetails> BillDetails { get; set; }
+
+        //public string EntityLocation { get; set; }
+        //public string Assignee { get; set; }
+        //public string FileNo { get; set; }
+        //public string TermOfGrant { get; set; }
+        //public string PropertyOwnerEmail { get; set; }
+        //public string Salutation { get; set; }
+    }
 }

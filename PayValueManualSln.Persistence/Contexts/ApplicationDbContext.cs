@@ -45,6 +45,7 @@ namespace PayValueManualSln.Infrastructure.Persistence.Contexts
         public virtual DbSet<MapUserApproval> MapUserApproval { get; set; }
         public virtual DbSet<AgencySignature> AgencySignature { get; set; }
         public virtual DbSet<AppModule> AppModule { get; set; }
+        public virtual DbSet<DepositOnConsent> DepositOnConsents { get; set; }
         public virtual DbSet<Category> Category { get; set; }
         public virtual DbSet<Department> Department { get; set; }
         public virtual DbSet<InputDefinitionMapping> InputDefinitionMapping { get; set; }

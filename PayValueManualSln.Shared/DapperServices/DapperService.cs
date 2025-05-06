@@ -24,7 +24,7 @@ namespace PayValueManualSln.Shared.DapperServices
             //var configs = new ConfigurationBuilder()
             //  .AddJsonFile("appsettings.json")
             //  .Build();
-
+                
             //Initialize Logger
             //Log.Logger = new LoggerConfiguration()
             //    .ReadFrom.Configuration(configs)
@@ -33,7 +33,7 @@ namespace PayValueManualSln.Shared.DapperServices
         public void Dispose()
         {
 
-        }
+            }
 
         public int Execute(string sp, DynamicParameters parms, CommandType commandType = CommandType.StoredProcedure, string connecString = null)
         {
