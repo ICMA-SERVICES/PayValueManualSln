@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PayValueManualSln.Infrastructure.Persistence.Contexts;
 
@@ -11,9 +12,10 @@ using PayValueManualSln.Infrastructure.Persistence.Contexts;
 namespace PayValueManualSln.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250507113124_merchant")]
+    partial class merchant
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -85,6 +87,9 @@ namespace PayValueManualSln.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("MerchantConfigId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -119,27 +124,11 @@ namespace PayValueManualSln.Persistence.Migrations
 
                     b.HasIndex("CategoryId");
 
+                    b.HasIndex("MerchantConfigId");
+
                     b.HasIndex("TypesId");
 
                     b.ToTable("Agency");
-                });
-
-            modelBuilder.Entity("AgencyMerchantConfig", b =>
-                {
-                    b.Property<int>("MerchantConfigId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("AgencyCode")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("AgencyId")
-                        .HasColumnType("int");
-
-                    b.HasKey("MerchantConfigId", "AgencyCode", "AgencyId");
-
-                    b.HasIndex("AgencyCode", "AgencyId");
-
-                    b.ToTable("AgencyMerchantConfig");
                 });
 
             modelBuilder.Entity("PayValueManualSln.Domain.Entities.AdditionalServiceDetail", b =>
@@ -2716,26 +2705,15 @@ namespace PayValueManualSln.Persistence.Migrations
                         .WithMany("Agency")
                         .HasForeignKey("CategoryId");
 
+                    b.HasOne("PayValueManualSln.Domain.Entities.Settings.MerchantConfig", null)
+                        .WithMany("Agency")
+                        .HasForeignKey("MerchantConfigId");
+
                     b.HasOne("PayValueManualSln.Domain.Entities.Settings.Types", null)
                         .WithMany("Agency")
                         .HasForeignKey("TypesId");
 
                     b.Navigation("AgencyLogo");
-                });
-
-            modelBuilder.Entity("AgencyMerchantConfig", b =>
-                {
-                    b.HasOne("PayValueManualSln.Domain.Entities.Settings.MerchantConfig", null)
-                        .WithMany()
-                        .HasForeignKey("MerchantConfigId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Agency", null)
-                        .WithMany()
-                        .HasForeignKey("AgencyCode", "AgencyId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("PayValueManualSln.Domain.Entities.Setting.Revenue", b =>
@@ -3048,6 +3026,11 @@ namespace PayValueManualSln.Persistence.Migrations
             modelBuilder.Entity("PayValueManualSln.Domain.Entities.Settings.MenuSetup", b =>
                 {
                     b.Navigation("UsersRolePermission");
+                });
+
+            modelBuilder.Entity("PayValueManualSln.Domain.Entities.Settings.MerchantConfig", b =>
+                {
+                    b.Navigation("Agency");
                 });
 
             modelBuilder.Entity("PayValueManualSln.Domain.Entities.Settings.Rate", b =>

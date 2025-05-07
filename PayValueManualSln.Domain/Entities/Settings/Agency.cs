@@ -27,11 +27,10 @@ public class Agency : BaseEntity
     public bool? ExternalPaymentCodeRequired { get; set; }
     public int AgencyLogoId { get; set; }
     public int AuthorizedSignatureId { get; set; }
-
-    public virtual MerchantConfig MerchantCodeNavigation { get; set; }
     public virtual AgencySignature AgencySignature { get; set; }
     public virtual AgencyLogo AgencyLogo { get; set; }
     public virtual ICollection<Department> Department { get; set; }
+    public virtual ICollection<MerchantConfig> MerchantConfig { get; set; }
     public virtual ICollection<ServiceMethod> ServiceMethod { get; set; }
     public virtual ICollection<Services> Services { get; set; }
 }

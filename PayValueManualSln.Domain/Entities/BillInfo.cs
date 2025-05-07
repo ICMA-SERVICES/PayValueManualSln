@@ -66,7 +66,6 @@ namespace PayValueV2.Domain.Entities.PayValue
 		public decimal? Value { get; set; }
         public bool? IsRenewed { get; set; }
 
-        public BillAdditionalInfo BillAdditionalInfo { get; set; }
         public virtual ICollection<BillDetails> BillDetails { get; set; }
 
         //public string EntityLocation { get; set; }

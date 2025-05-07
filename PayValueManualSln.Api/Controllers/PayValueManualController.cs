@@ -143,6 +143,7 @@ namespace PayValueManualSln.Api.Controllers
             }
 
         }
+        [Authorize(Roles = "Initiator")]
         [HttpGet("get-utin")]
         public async Task<IActionResult> GetUtin(string username, int id)
         {

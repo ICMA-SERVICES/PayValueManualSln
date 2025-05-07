@@ -171,11 +171,11 @@ namespace PayValueManualSln.Infrastructure.Identity.Services
                 FirstName = request.FirstName,
                 LastName = request.LastName,
                 UserName = (request.UserName == null || request.UserName == "") ? request.Email : request.UserName,
-                EmailConfirmed = false,
+                EmailConfirmed = true,
                 MerchantCode = request.MerchantCode,
                 IsActive = false,
                 PhoneNumber = request.PhoneNumber,
-                CreatedBy = _authenticatedUserService.Email,
+                CreatedBy = _authenticatedUserService.Email ?? "System",
                 DateCreated = DateTime.Now,
                 ApprovalRankingId = request.ApprovalRankingId,
                 AgencyCode = request.AgencyCode,
@@ -264,7 +264,7 @@ namespace PayValueManualSln.Infrastructure.Identity.Services
                 new Claim("useremail", user.Email),
                 new Claim("username", user.UserName),
                 new Claim("roleid", userrole.RoleId),
-                new Claim("rolename", userrole.Name),
+                new Claim(ClaimTypes.Role, userrole.Name),
                 new Claim("name", ($"{user.FirstName} {user.LastName}")),
                 new Claim("rankid", user.ApprovalRankingId.ToString() == null ? "" : user.ApprovalRankingId.ToString()),
                 new Claim("merchantcode", user.MerchantCode == null ? "" : user.MerchantCode),
@@ -321,14 +321,14 @@ namespace PayValueManualSln.Infrastructure.Identity.Services
                 //{
                 //    return ApplicationConstants.FailureMessage($"This {user.Email} has been Confirmed previously . You can now Login to your account");
                 //}
-                if (bypass)
-                {
-                    code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                }
-                else
-                {
-                    code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code));
-                }
+                    if (bypass)
+                    {
+                        code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                    }
+                    else
+                    {
+                        code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code));
+                    }
 
                 var result = await _userManager.ConfirmEmailAsync(user, code);
                 if (result.Succeeded)
@@ -758,29 +758,60 @@ namespace PayValueManualSln.Infrastructure.Identity.Services
 
         public async Task<Response<string>> ChangePassword(ChangePasswordRequestByPass model)
         {
+            var response = new Response<string>();
             try
             {
                 var account = await _userManager.FindByEmailAsync(model.Email);
+
+                if (account == null)
+                {
+                    // Log user not found error
+                    _logger.LogError($"User with email {model.Email} not found.");
+
+                    response.Data = null;
+                    response.Message = $"User with email {model.Email} not found.";
+                    response.ResponseCode = "-1";
+                    response.Succeeded = false;
+                    response.StatusCode = 400;
+                }
+
                 var token = await _userManager.GeneratePasswordResetTokenAsync(account);
                 token = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
 
                 var code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(token));
                 var result = await _userManager.ResetPasswordAsync(account, code, model.NewPassword);
+
                 if (result.Succeeded)
                 {
-                    return new Response<string> { Data = "Password Resetted.", Message = $"Password Resetted.", ResponseCode = "00", Succeeded = true, StatusCode = 200 };
+                    response.Message = "Password Reset successfully.";
+                    response.ResponseCode = "00";
+                    response.Succeeded = true;
+                    response.StatusCode = 200;
                 }
                 else
                 {
-                    return new Response<string> { Data = null, Message = $"Password rest failed.", ResponseCode = "-1", Succeeded = false, StatusCode = 400 };
+                    // Log error if password reset fails
+                    _logger.LogError($"Password reset failed for user {model.Email}. Errors: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                    response.Message = "Password reset failed";
+                    response.ResponseCode = "-1";
+                    response.Succeeded = false;
+                    response.StatusCode = 400;
+                    response.Data = null;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
-            }
+                // Log exception if an error occurs
+                _logger.LogError(ex, "An error occurred while resetting the password.");
+                response.Message = "An error occurred while resetting the password";
+                response.ResponseCode = "-1";
+                response.Succeeded = false;
+                response.StatusCode = 500;
+                response.Data = null;
+                };
+            return response;
         }
+
 
         public async Task<List<UserDTO>> GetUsers()
         {

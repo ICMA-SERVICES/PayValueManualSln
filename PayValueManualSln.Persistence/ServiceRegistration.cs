@@ -17,7 +17,8 @@ namespace PayValueManualSln.Infrastructure.Persistence
 			services.AddDbContext<ApplicationDbContext>(options =>
 	options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
             services.AddDbContext<IcmaCollectionContext>(options =>
-                   options.UseInMemoryDatabase("IcmaCollectionDb"));
+    options.UseSqlServer(configuration.GetConnectionString("ICMAConnnection")));
+
 
             #region Repositories
             services.AddTransient(typeof(IGenericRepositoryAsync<>), typeof(GenericRepositoryAsync<>));
