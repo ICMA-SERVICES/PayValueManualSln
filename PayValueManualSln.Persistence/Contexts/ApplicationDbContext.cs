@@ -39,6 +39,7 @@ namespace PayValueManualSln.Infrastructure.Persistence.Contexts
         public virtual DbSet<PayerDetails> PayerDetails { get; set; }
         public virtual DbSet<Service> Service { get; set; }
         public virtual DbSet<Rate> Rate { get; set; }
+        public DbSet<LetterFormat> LetterFormat { get; set; }
         public virtual DbSet<Agency> Agency { get; set; }
         public virtual DbSet<AgencyLogo> AgencyLogo { get; set; }
         public virtual DbSet<ModuleApprovalConfig> ModuleApprovalConfig { get; set; }

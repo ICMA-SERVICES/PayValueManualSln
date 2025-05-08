@@ -62,7 +62,8 @@ namespace PayValueManualSln.Api
             builder.Services.AddHttpContextAccessor();
 			builder.Services.AddHttpClient();
 			builder.Services.AddIdentityInfrastructure(builder.Configuration);
-           
+            builder.Services.AddMemoryCache();
+
             //services.AddHttpClient();
 
             //Hangfire Configure Ends
