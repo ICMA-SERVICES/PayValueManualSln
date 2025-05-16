@@ -19,7 +19,7 @@ namespace PayValueV2.Domain.Entities.PayValue
 		public string? ZoneName { get; set; }
 		public int? LocationId { get; set; }
 		public string? LocationName { get; set; }
-		public bool? IsDepositRequired { get; set; }
+		public bool? IsDepositRequired { get; set; } = true;
 		public string? ItemPaymentCode { get; set; }
 		public string? PaymentReferenceNum { get; set; }
 		public string? PaymentItemName { get; set; }
@@ -48,7 +48,7 @@ namespace PayValueV2.Domain.Entities.PayValue
 		public BillInfo BillInfo { get; set; }
         public DateTime? RenewalDate { get; set; }
         public bool? IsRenewed { get; set; } = false;
-        public string PreviousBaseNumber { get; set; } //Update for new record
+        public string? PreviousBaseNumber { get; set; } //Update for new record
         public string PreviousItemPaymentCode { get; set; } //Update for new record
     }
 }

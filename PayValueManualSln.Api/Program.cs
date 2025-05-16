@@ -3,6 +3,7 @@ using PayValueManualSln.Infrastructure.Shared;
 using PayValueManualSln.Infrastructure.Identity;
 using PayValueManualSln.Infrastructure.Identity.Seeds;
 using PayValueManualSln.Core.Application;
+using PayValueManualSln.Application.PdfGenerator;
 using Serilog;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.OpenApi.Models;
@@ -14,6 +15,8 @@ using PayValueManualSln.Domain.Entities.Setting;
 using PayValueManualSln.Domain.Entities.Settings;
 using PayValueManualSln.Application.DTOs;
 using PayValueManualSln.Application.DTOs.Tutorial;
+using DinkToPdf.Contracts;
+using DinkToPdf;
 
 namespace PayValueManualSln.Api
 {
@@ -56,9 +59,13 @@ namespace PayValueManualSln.Api
             builder.Services.Configure<Appsettings>(builder.Configuration.GetSection("AppSettings"));
             builder.Services.Configure<MailSettingsCredentials>(
             builder.Configuration.GetSection("MailSettingsCredentials"));
-            builder.Services.AddSingleton<List<UserCredential>>();
-            builder.Services.AddSingleton<JwtService>();
-
+            builder.Services.AddScoped<List<UserCredential>>();
+            builder.Services.AddScoped<JwtService>();
+            //Pdf Generator code
+            var context = new CustomAssemblyLoadContext();
+            context.LoadUnmanagedLibrary(Path.Combine(Directory.GetCurrentDirectory(), "libwkhtmltox.dll"));
+            builder.Services.AddSingleton(typeof(IConverter), new SynchronizedConverter(new PdfTools()));
+            //Pdf Generator code
             builder.Services.AddHttpContextAccessor();
 			builder.Services.AddHttpClient();
 			builder.Services.AddIdentityInfrastructure(builder.Configuration);

@@ -350,7 +350,23 @@ namespace PayValueManualSln.Persistence.Repositories
                     address = request.companyAddress ?? request.address,
                     IsApproved = null,
                     ChangeRequesterId = _authenticatedUser.UserId,
-                    ApprovalComment = request.ApprovalComment
+                    ApprovalComment = request.ApprovalComment,
+                    contactName = request.contactName,
+                    cacNumber = request.cacRegNumber,
+                    address1 = request.companyAddress,
+                    contactPersonEmail=request.contactEmail,
+                    employeeName = request.firstName,
+                    courtesyTitle = request.courtesyTitle,
+                    businessTypeId = request.businessTypeId,
+                    jtbTin = request.jtbtin,
+                    revenueOfficeID = request.revenueOfficeID,
+                    townID = request.townId,
+                    payerType = request.payerType,
+                    payerCategory = request.payerCategory,
+                    lgaId = request.lgaId,
+                    firstName = request.firstName,
+                    otherName = request.otherName,
+                    utin = request.utin
                 };
                 await _context.PayerDetails.AddAsync(obj);
                 var result = await _context.SaveChangesAsync();
@@ -394,7 +410,7 @@ namespace PayValueManualSln.Persistence.Repositories
         {
             var response = new Response<List<PayerDetailsDto>>();
             try
-            {
+                {
                 var result = await _context.PayerDetails.Where(x => x.IsApproved == null).ToListAsync();
                 if (result == null || !result.Any())
                 {
@@ -474,6 +490,7 @@ namespace PayValueManualSln.Persistence.Repositories
                         NewRecord = _mapper.Map<PayerDetailsDto>(newRecord),
                         OldRecord = oldRecord.Data.payerCollectionDetails.FirstOrDefault()
                     };
+                    response.Data = result;
                     response.Message = "Pending assessment retrieved successfully.";
                     response.Succeeded = true;
                 }
@@ -492,7 +509,405 @@ namespace PayValueManualSln.Persistence.Repositories
             }
             return response;
         }
+        public async Task<List<AssessmentDTO>> GetAllAssessmentDetails(string decodedPaymentCodeString)
+        {
+            var sources = new List<AssessmentDTO>();
 
+            var checkForMergeAssessment = await _context.BillInfo.Where(x => x.PaymentCode == decodedPaymentCodeString && x.IsAdditionalAssessmentRequired == true && x.IsPrimaryAssessment == true && x.MergerRequestId != null && x.IsDeleted == false).ToListAsync().ConfigureAwait(false);
+
+            if (checkForMergeAssessment.Any())
+            {
+                var agencyResult = await _context.Agency.Where(x => x.Code == checkForMergeAssessment.First().AgencyCode).FirstAsync();
+                var assDetail = await (from a in _context.BillInfo
+                                       join f in _context.BillDetails
+                                       on a.BillId equals f.BillInfoGuid
+                                       join b in _context.Services
+                                         on a.ServiceId equals b.Id
+                                       join c in _context.AgencySignature on a.AgencyCode equals c.AgencyCode
+                                       join e in _context.Agency on a.AgencyCode equals e.Code
+                                       join d in _context.Types
+                                       on a.BillDetails.First().TypeId equals d.Id
+                                       where a.IsReversed != true && a.IsDeleted != true && a.IsApproved == true && b.IsStandardLetterRequired == true && a.PaymentCode == decodedPaymentCodeString && c.IsActive == true
+
+                                       select new AssessmentDTO
+                                       {
+                                           SignatoryName = b.SignatoryName,
+                                           SignatoryPosition = b.SignatoryPosition,
+                                           RentRevisionPeriod = c.RentRevisionPeriod,
+                                           UsedCategoryName = d.Name,
+                                           AssessmentCategoryName = d.Name,
+                                           RequestId = a.BillId.ToString(),
+                                           Name = a.PayerName,
+                                           PaymentCode = a.PaymentCode,
+                                           RevenueName = a.BillDetails.First().RevenueName,
+                                           PartPaymentAllow = a.BillDetails.First().PartPaymentAllow,
+                                           IsMailSent = a.IsMailSent,
+                                           AgencyEmail = agencyResult.Email,
+                                           AgencyPhone = agencyResult.Phone,
+                                           AgencyName = agencyResult.Name,
+                                           AgencyAddress1 = agencyResult.OfficialAddress1,
+                                           AgencyAddress2 = agencyResult.OfficialAddress2,
+                                           AgencyLogo = agencyResult.AgencyLogo.Image,
+                                           AgencySignature = agencyResult.AgencySignature.Image,
+                                           PayerRefNo = a.PayerUtin,
+                                           Address = a.Address,
+                                           BillInfoGuid = a.BillId,
+                                           Telephone = a.Telephone,
+                                           StateGovernorName = e.GovernorName,
+                                           ServiceHeader = b.ServiceHeader,
+                                           ServiceSubHeader = b.ServiceSubHeader,
+                                           StandardLetterDescriptions = b.StandardLetterDescriptions,
+                                           Email = a.Email,
+                                           Location = _appsettings.StateName,
+                                           //DateSubmitted = Convert.ToDateTime(a.DateSubmitted.Value.ToString("dd MMM yyyy hh:mm:ss tt", DateTimeFormatInfo.InvariantInfo)),
+                                           DateSubmitted = a.CreatedOn,
+                                           ServiceId = b.Id,
+                                           ServiceName = b.Name,
+                                           PaymentItem = a.BillDetails.First().PaymentItemName,
+                                           BaseAssnumber = a.PaymentCode,
+                                           AssessementRefNo = a.PaymentCode,
+                                           AssessementPeriod = a.BillPeriod,
+                                           RebateAmount = a.BillDetails.First().RebateAmount,
+                                           AssesementAmount = a.TotalAssessed,
+                                           AssessmentBalance = a.BillDetails.First().BillBalance,
+                                           RebatePercentage = Convert.ToInt32(a.BillDetails.First().RebatePercentage),
+                                           ShowRebatePercentage = a.BillDetails.First().ShowRebateAmount,
+                                           AssesementAmountFormatted = Convert.ToDecimal(Convert.ToDecimal(a.TotalAssessed).ToString(CultureInfo.InvariantCulture)).ToString("N"),
+                                           RebateAmountFormatted = Convert.ToDecimal(Convert.ToDecimal(a.BillDetails.First().RebateAmount).ToString(CultureInfo.InvariantCulture)).ToString("N"),
+                                           AssessmentBalanceFormatted = Convert.ToDecimal(Convert.ToDecimal(a.BillDetails.First().BillBalance).ToString(CultureInfo.InvariantCulture)).ToString("N"),
+                                           TotalAmountFormatted = Convert.ToDecimal(Convert.ToDecimal(Convert.ToDecimal(a.TotalAssessed) - Convert.ToDecimal(a.BillDetails.First().RebateAmount)).ToString(CultureInfo.InvariantCulture)).ToString("N"),
+                                           AssesementAmountpaid = a.BillDetails.First().BillAmountPaid
+                                       }).ToListAsync().ConfigureAwait(false);
+
+                sources = assDetail;
+                return sources;
+            }
+
+            var assDetails = await (from a in _context.BillInfo
+                                    join f in _context.BillDetails
+                                    on a.BillId equals f.BillInfoGuid
+                                    join b in _context.Services
+                                    on a.ServiceId equals b.Id
+                                    join c in _context.AgencySignature
+                                    on a.AgencyCode equals c.AgencyCode
+                                    join d in _context.Types
+                                    on a.BillDetails.First().TypeId equals d.Id
+                                    join e in _context.Agency
+                                      on a.AgencyCode equals e.Code
+                                    where a.IsDeleted != true && a.IsApproved == true && a.IsReversed != true
+                                    && b.IsStandardLetterRequired == true && a.BaseNumber == decodedPaymentCodeString && c.IsActive == true
+                                    select new AssessmentDTO
+                                    {
+                                        SignatoryName = b.SignatoryName,
+                                        SignatoryPosition = b.SignatoryPosition,
+                                        RentRevisionPeriod = c.RentRevisionPeriod,
+                                        UsedCategoryName = d.Name,
+                                        AssessmentCategoryName = d.Name,
+                                        RequestId = a.BillId.ToString(),
+                                        Name = a.PayerName,
+                                        PaymentCode = a.PaymentCode,
+                                        RevenueName = a.BillDetails.First().RevenueName,
+                                        PartPaymentAllow = a.BillDetails.First().PartPaymentAllow,
+                                        IsMailSent = a.IsMailSent,
+                                        AgencyEmail = e.Email,
+                                        AgencyPhone = e.Phone,
+                                        AgencyName = e.Name,
+                                        AgencyAddress1 = e.OfficialAddress1,
+                                        AgencyAddress2 = e.OfficialAddress2,
+                                        AgencyLogo = e.AgencyLogo.Image,
+                                        AgencySignature = e.AgencySignature.Image,
+                                        PayerRefNo = a.PayerUtin,
+                                        //$"{a.Lastname} {a.Firstname} {a.Othernames}",
+                                        Address = a.Address,
+                                        Telephone = a.Telephone,
+                                        BillInfoGuid = a.BillId,
+                                        StateGovernorName = e.GovernorName,
+                                        ServiceHeader = b.ServiceHeader,
+                                        ServiceSubHeader = b.ServiceSubHeader,
+                                        StandardLetterDescriptions = b.StandardLetterDescriptions,
+                                        Email = a.Email,
+                                        Location = _appsettings.StateName,
+                                        //DateSubmitted = Convert.ToDateTime(a.DateSubmitted.Value.ToString("dd MMM yyyy hh:mm:ss tt", DateTimeFormatInfo.InvariantInfo)),
+                                        DateSubmitted = a.CreatedOn,
+                                        ServiceId = b.Id,
+                                        ServiceName = b.Name,
+                                        PaymentItem = a.BillDetails.First().PaymentItemName,
+                                        BaseAssnumber = a.PaymentCode,
+                                        AssessementRefNo = a.PaymentCode,
+                                        AssessementPeriod = a.BillPeriod,
+                                        RebateAmount = a.BillDetails.First().RebateAmount,
+                                        AssesementAmount = a.TotalAssessed,
+                                        AssessmentBalance = a.BillDetails.First().BillBalance,
+                                        RebatePercentage = Convert.ToInt32(a.BillDetails.First().RebatePercentage),
+                                        ShowRebatePercentage = a.BillDetails.First().ShowRebateAmount,
+                                        AssesementAmountFormatted = Convert.ToDecimal(Convert.ToDecimal(a.TotalAssessed).ToString(CultureInfo.InvariantCulture)).ToString("N"),
+                                        RebateAmountFormatted = Convert.ToDecimal(Convert.ToDecimal(a.BillDetails.First().RebateAmount).ToString(CultureInfo.InvariantCulture)).ToString("N"),
+                                        AssessmentBalanceFormatted = Convert.ToDecimal(Convert.ToDecimal(a.BillDetails.First().BillBalance).ToString(CultureInfo.InvariantCulture)).ToString("N"),
+                                        TotalAmountFormatted = Convert.ToDecimal(Convert.ToDecimal(Convert.ToDecimal(a.TotalAssessed) - Convert.ToDecimal(a.BillDetails.First().RebateAmount)).ToString(CultureInfo.InvariantCulture)).ToString("N"),
+                                        AssesementAmountpaid = a.BillDetails.First().BillAmountPaid
+                                    }).ToListAsync().ConfigureAwait(false);
+
+            sources = assDetails;
+
+            return sources;
+
+        }
+        public string GetGovernorConsentHTMLString(List<AssessmentDTO> assessmentDetail, List<BillAdditionalInfoDto> additionalInfo, List<BillDetailsDto> billDetails, string howToPayUrl, string confirmDocUrl)
+        {
+            var howToPayBarcode = howToPayUrl;
+            var confirmDocBarcode = confirmDocUrl;
+            var assigneeName = string.Empty;
+            var propertyLocation = "NOT PROVIDED AT THE ASSESSMENT STAGE";
+            var salutationName = string.Empty;
+            var payerFileNo = string.Empty;
+            var sizeOfLand = string.Empty;
+            var termsofGrant = string.Empty;
+            var sb = new StringBuilder();
+            if (!assessmentDetail.Any())
+            {
+                var sbNoRecord = new StringBuilder();
+                sbNoRecord.Append(@"
+                        <html>
+                            <head>
+                            </head>
+                            <body>
+                                <br><br><br><br><br><br>
+                                <div class='header'><h1>Attention!!!</h1></div>
+                                    <div class='firstheader'>
+                                   No Record to Display. Service does not required a standard letter. If otherwise kindly contact 
+                                    the administrator. Thanks.
+                                    </div>
+                                ");
+
+                sbNoRecord.Append(@"</body>
+                        </html>");
+
+                return sbNoRecord.ToString();
+            }
+            var assessmentDetailFirstDefault = assessmentDetail.FirstOrDefault();
+            var amountInWords = NumberToWordsConverter.ConvertToWords((decimal)billDetails.Sum(x => x.TotalBillAmount));
+            //var payerFileNo = "ODD/PL/C.30/94";
+            var salutation = assessmentDetailFirstDefault.Name.ToUpper();
+            var payerAddress1 = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(assessmentDetailFirstDefault.Address.ToLower()); //TitleCase
+            var payerstate = assessmentDetailFirstDefault.Location.ToUpper();
+            var telePhone = assessmentDetailFirstDefault.Telephone;
+            var assDate = assessmentDetailFirstDefault.DateSubmitted.ToLongDateString();
+            var grpAssRefNo = assessmentDetailFirstDefault.BaseAssnumber;
+            var paymentCode = assessmentDetailFirstDefault.PaymentCode;
+            var sumOfRebate = billDetails.Sum(x => x.RebateAmount);
+            var sumOfAssAmountFormated = Convert.ToDecimal(Convert.ToDecimal(billDetails.Sum(x => x.BillAmount)).ToString(CultureInfo.InvariantCulture)).ToString("N");
+            var totalSum = Convert.ToDecimal(Convert.ToDecimal(billDetails.Sum(x => x.TotalBillAmount)).ToString(CultureInfo.InvariantCulture)).ToString("N");
+            var sumOfRebateFormated = Convert.ToDecimal(Convert.ToDecimal(billDetails.Sum(x => x.RebateAmount)).ToString(CultureInfo.InvariantCulture)).ToString("N");
+            var firstHeader = "WITHOUT PREJUDICE";
+            var signatoryName = assessmentDetailFirstDefault.SignatoryName;
+            var signatoryPosition = assessmentDetailFirstDefault.SignatoryPosition;
+            var secondSignatoryPosition = "For: Special Adviser/Director General (Lands)";
+            var stateGorvenorsName = assessmentDetailFirstDefault.StateGovernorName;
+            var serviceSubHeader = assessmentDetailFirstDefault.ServiceSubHeader;
+            var serviceHeader = assessmentDetailFirstDefault.ServiceHeader;
+            var typeofUse = assessmentDetailFirstDefault.CategoryName;
+            var rentRevisionPeriod = assessmentDetailFirstDefault.RentRevisionPeriod;
+            var agencyName = assessmentDetailFirstDefault.AgencyName.ToUpperInvariant();
+            var agencyAddress1 = assessmentDetailFirstDefault.AgencyAddress1.ToUpperInvariant();
+            var agencyAddress2 = assessmentDetailFirstDefault.AgencyAddress2.ToUpperInvariant();
+            var agencyLogo = assessmentDetailFirstDefault.AgencyLogo;
+            var agencySignature = assessmentDetailFirstDefault.AgencySignature;
+            var offerShortName = "balance of &nbsp;Consent";
+
+            var assigneeNameInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.AssigneeOrPropertyOwner);
+            var propertyLocationInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.PropertyLocation);
+            var salutationInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.Salutation);
+            var payerFileNos = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.FileNo);
+            var sizeOfLandInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.SizeOfLand);
+            var termsofGrantInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.TermsOfGrant);
+            var payerFieldValue = payerFileNos.FirstOrDefault()?.FieldValue.ObjectToString();
+            if (!string.IsNullOrEmpty(payerFieldValue))
+            {
+                payerFileNo = payerFieldValue;
+            }
+            var assigneeFieldValue = assigneeNameInDb.FirstOrDefault()?.FieldValue.ObjectToString();
+            if (!string.IsNullOrEmpty(assigneeFieldValue))
+            {
+                assigneeName = assigneeFieldValue.ToUpperInvariant();
+                assigneeName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(assigneeName.ToLower());
+            }
+
+            var propertyLocationValue = propertyLocationInDb.FirstOrDefault()?.FieldValue.ObjectToString();
+            if (!string.IsNullOrEmpty(propertyLocationValue))
+            {
+                propertyLocation = propertyLocationValue;
+            }
+
+            var salutationValue = salutationInDb.FirstOrDefault()?.FieldValue.ObjectToString();
+            if (!string.IsNullOrEmpty(salutationValue))
+            {
+
+            }
+
+
+            var consentType = "INTEREST";  //ask Arotutu for solution on this
+
+            var LandcompulsoryHeader = "OTHER SPECIAL CONDITIONS";
+            var Landcompulsory = $"<div class='thirdheader' style='text-align: justify;'><br /> 2. You are requested to pay the sum of &nbsp;<b>{amountInWords} &nbsp;Only (₦{totalSum}) </b> being the total sum payable on the {offerShortName} as evidence of acceptance of this offer. The said amount is expected to be paid using the Payment Code stated above in this document via any of the following payment channels : <br /> <p><p/>a.)&nbsp;Ogun State Government Approved Bank(s) via eCashier, Remitta, PayDirect Platform. &nbsp;<br/>b.) Online via {_appsettings.PaymentOnlineWebsite}. &nbsp; <br/>c.) POS.</div>";
+            //&nbsp;&nbsp;&nbsp;&nbsp;
+            var LandText = $"3. Kindly notify the Bureau of your full payment of consent fee for further processing of your title document. <br /><br /> 4. Your prompt payment of all fee/charges into the coffers of Ogun State Government will hasten further processing of your application for Governor's consent to Deed of Assignment. <br /><br /> 5. Many thanks.";
+
+            var standardLetterDescriptions = assessmentDetailFirstDefault.StandardLetterDescriptions;
+
+            var secondHeadingWordings = $"{serviceHeader} {consentType} IN LAND SITUATE, LYING AND BEING AT {propertyLocation.ToUpper()}. {payerstate}.";
+
+            var firstBodyWord = $"<div><b>ASSIGNEE : &nbsp;{assigneeName}.</b></div> <br>Refer to the above subject matter, please. <br> <br> I am directed to inform you that <b>{stateGorvenorsName}</b> &nbsp;has graciously considered your request and approved the {serviceSubHeader}";
+
+            var secondBodyWordings = LineBreakers.ShowLineBreaks(Landcompulsory);
+            var remainingBodyWordings = LineBreakers.ShowLineBreaks(standardLetterDescriptions);
+            var firstBodyWords = LineBreakers.ShowLineBreaks(firstBodyWord);
+            //<body style='width: 97%; padding-top: 30%;'>
+
+            sb.AppendFormat(@$"<html>
+                            <head>
+                            </head>
+                            <body style='width: 97%'><br><br><div style='text-align: left;' class='flex-container'>{payerFileNo}</div>");
+
+            sb.AppendFormat(@$"
+            <table style='border:none;'>
+              <tr style='border:none;'>
+                <td style='border:none; text-align: left;'>&nbsp;&nbsp;&nbsp;&nbsp;<img class='imageLeft' src='{confirmDocBarcode}' alt='{confirmDocBarcode}'/><br><span style='text-align: left;'>Confirm Document</span></td>
+                <td style='border:none; text-align: left;'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img class='imageLeft' src='{agencyLogo}' alt='{agencyLogo}' style='width: 160px; height: 150px'/></td>
+                <td style='border:none; text-align: right;'><img class='imageRight' src='{howToPayBarcode}' alt='{howToPayBarcode}'/><br>
+                <span style='text-align: right;'>How to Pay</span>
+                </td>
+              </tr>
+            </table>
+            ");
+
+            sb.AppendFormat(@$"<div style='text-align: center;'><span style='font-size: larger'><b>{agencyName}</b></span><br>{agencyAddress1}<br>{agencyAddress2}</div><br>");
+            sb.AppendFormat(@$"<div style='text-align: center;'><span style='font-size: xx-large'><b>PAYMENT CODE : {paymentCode}</b></span></div>");
+
+
+
+            if (!string.IsNullOrEmpty(salutationName))
+            {
+                sb.Append(@$"{salutationName} <br>");
+            }
+
+            if (!string.IsNullOrEmpty(assigneeName))
+            {
+                sb.Append(@$"{assigneeName} <br>");
+                sb.Append(@"C/o");
+            }
+
+            sb.AppendFormat(@"
+                        <div class='row'>
+                            <div class='column'> {0}<br> {1}</div>
+                            <div class='column'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+                            <div class='column'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+                            <b><div class='column'>{2} <br> Phone No.: {3}</div></b>
+                        </div>
+                            <div class='firstheader'><h4><q>{4}</q> <br> <span class='secondheader'>{5}</span> </h4></div>
+                            <div class='thirdheader' style='text-align: justify;'>{6}</div> <br>
+                            <div class='row'>
+                            <div class='column'> <b>Terms</b> <br> Size:  <br> <br> <b>FEES</b></div>
+                            <div class='column'>&nbsp;<br> {7} </div>
+                        </div>"
+                            , salutation, payerAddress1, assDate, telePhone, firstHeader, secondHeadingWordings, firstBodyWords, sizeOfLand);
+
+            if (sumOfRebate > 0)
+            {
+                var rebatePercentage = billDetails.Where(x => x.RebateAmount > 0).Select(x => x.RebatePercentage).FirstOrDefault();
+
+                var showRebatePercent = string.Empty;
+                bool showRebatePercentStatus = billDetails.Where(x => x.RebateAmount > 0 && x.ShowRebateAmount == false).Any();
+                if (!showRebatePercentStatus)
+                {
+                    showRebatePercent = "%";
+                    sb.AppendFormat(@"
+                              <br> 
+                                <table align='left' style='width: 99%; padding-bottom: 500px;'>
+                                    <thead>
+                                    <tr align='left'>
+                                        <th align='left'>&nbsp;Payment Item(s)</th>
+                                        <th align='right'>Amount (₦)&nbsp;</th>
+                                        <th align='right'>{0}{1} &nbsp;Rebate (₦)&nbsp;</th>  
+                                        <th align='right'>Total (₦)&nbsp;</th>
+                                    </tr>
+                                       </thead>", rebatePercentage, showRebatePercent);
+                }
+                else
+                {
+                    sb.AppendFormat(@"
+                              <br> 
+                                <table align='left' style='width: 99%; padding-bottom: 500px;'>
+                                    <thead>
+                                    <tr align='left'>
+                                        <th align='left'>&nbsp;Payment Item(s)</th>
+                                        <th align='right'>Amount (₦)&nbsp;</th>
+                                        <th align='right'>Rebate (₦)&nbsp;</th>  
+                                        <th align='right'>Total (₦)&nbsp;</th>
+                                    </tr>
+                                       </thead>");
+                }
+
+                foreach (var emp in billDetails)
+                {
+                    sb.AppendFormat(@"<tbody><tr align='left'>
+                                    <td align='left'>&nbsp;{0}</td>
+                                    <td align='right'>&nbsp;{1}&nbsp;</td>
+                                    <td align='right'>&nbsp;{2}&nbsp;</td>
+                                    <td align='right'>&nbsp;{3}&nbsp;</td>
+                                  </tr></tbody>", emp.PaymentItemName, emp.AssesementAmountFormatted, emp.RebateAmountFormatted, emp.AssessmentBalanceFormatted);
+                }
+
+                sb.AppendFormat(@"<tfoot>
+                            <tr align='left'>
+                            <td>Total</td>
+                            <td align='right'>{0}</td>
+                            <td align='right'>{1}</td>
+                            <td align='right'>{2}&nbsp;</td>
+                            </tr></tfoot>", sumOfAssAmountFormated, sumOfRebateFormated, totalSum);
+            }
+            else
+            {
+                sb.Append(@"
+                              <br> 
+                                <table align='left' style='width: 99%; padding-bottom: 500px;'>
+                                    <thead>
+                                    <tr align='left'>
+                                        <th align='left'>&nbsp;Payment Item(s)</th>
+                                        <th align='right'>Amount (₦)&nbsp;</th>
+                                    </tr>
+                                       </thead>");
+
+                foreach (var emp in billDetails)
+                {
+                    sb.AppendFormat(@"<tbody><tr align='left'>
+                                    <td align='left'>&nbsp;{0}</td>
+                                    <td align='right'>&nbsp;{1}&nbsp;</td>
+                                  </tr></tbody>", emp.PaymentItemName, emp.AssessmentBalanceFormatted);
+                }
+
+                sb.AppendFormat(@"<tfoot>
+                            <tr align='left'>
+                            <td>Total</td>
+                            <td align='right'>{0}&nbsp;</td>
+                            </tr></tfoot>", totalSum);
+            }
+
+
+            sb.Append(@"</table>");
+
+            sb.AppendFormat(@"&nbsp;&nbsp;&nbsp;<br><b>{0}</b>", LandcompulsoryHeader);
+
+            sb.AppendFormat(@"{0}<div class='thirdheader' style='text-align: justify;'>{1}<div/>", secondBodyWordings, remainingBodyWordings);
+
+            sb.AppendFormat(@"<br><br><br><br><br><br><div style='text-align: center; padding-top: 10px;'>_____________________________</div>
+                                <p style='text-align: center;'> {0} <br> {1} <br> {2}</p>
+                             </body>
+                            </html>
+                            ", signatoryName, signatoryPosition, secondSignatoryPosition);
+
+
+            return sb.ToString();
+        }
         public async Task<Response<List<GetRateResponseDto>>> GetRevenuesForAssessmentAsync(GetRateRequestDto request)
         {
             var response = new List<GetRateResponseDto>();
@@ -727,7 +1142,32 @@ namespace PayValueManualSln.Persistence.Repositories
             {
                 try
                 {
-                    var billInfo = _mapper.Map<BillInfo>(request);
+                    var billInfo = new BillInfo
+                    {
+                        PayerName = request.PayerName,
+                        PayerUtin = request.PayerUtin,
+                        Email = request.Email,
+                        Address = request.Address,
+                        Telephone = request.Telephone,
+                        PaymentCode = request.PaymentCode,
+                        IsAdditionalAssessmentRequired = request.IsAdditionalAssessmentRequired,
+                        IsPrimaryAssessment = request.IsPrimaryAssessment,
+                        BillPeriod = request.BillPeriod,
+                        SignatureId = request.SignatureId,
+                        IsMailSent = request.IsMailSent,
+                        IsMailSendingRequired = request.IsMailSendingRequired,
+                        IsRebated = request.IsRebated,
+                        ClientId = request.ClientId,
+                        ServiceId = request.ServiceId,
+                        Pages = request.Pages,
+                        Value = request.Value,
+                        LandSize = request.LandSize,
+                        AgencyCode = request.AgencyCode,
+                        CreatedById = request.CreatedById,
+                        IsApproved = request.IsApproved,
+                        CreatedBy = _authenticatedUser.UserId
+                    };
+
                     billInfo.BillId = Guid.NewGuid();
                     var merchantRequireExternalPaymentCode = await _context.Agency.AnyAsync(x => x.Code == _authenticatedUser.AgencyCode && x.ExternalPaymentCodeRequired == true);
                     var baseNumber = GenerateBaseNumber(_appsettings.MerchantCode);
@@ -736,6 +1176,28 @@ namespace PayValueManualSln.Persistence.Repositories
                     {
                         billInfo.PaymentCode = baseNumber;
                     }
+                    billInfo.BillDetails = request.BillDetails?.Select(item => new BillDetails
+                    {
+                        RateId = item.RateId,
+                        ServiceId = item.ServiceId,
+                        ServiceRevenueId = item.ServiceRevenueId,
+                        ServiceName = item.ServiceName,
+                        TypeId = item.TypeId,
+                        TypeName = item.TypeName,
+                        ZoneId = item.ZoneId,
+                        ZoneName = item.ZoneName,
+                        LocationId = item.LocationId,
+                        LocationName = item.LocationName,
+                        PaymentItemName = item.PaymentItemName,
+                        BillAmount = item.BillAmount,
+                        Liability = item.Liability,
+                        RevenueCode = item.RevenueCode,
+                        RevenueName = item.RevenueName,
+                        PaymentReferenceNum = item.PaymentReferenceNum,
+                        IsDepositRequired = item.IsDepositRequired,
+                        AgencyCode = item.AgencyCode,
+                    }).ToList();
+
                     billInfo.Address = string.IsNullOrWhiteSpace(billInfo.Address) ? "NOT PROVIDED" : billInfo.Address;
                     billInfo.BaseNumber = baseNumber;
                     billInfo.CreatedById = _authenticatedUser.UserId == null ? request.CreatedById : _authenticatedUser.UserId;
@@ -748,6 +1210,7 @@ namespace PayValueManualSln.Persistence.Repositories
                     billInfo.ServiceName = request.BillDetails.FirstOrDefault().ServiceName;
                     billInfo.ServiceId = (long)request.BillDetails.First().ServiceId;
                     billInfo.TotalBillAmount = billInfo.TotalAssessed + billInfo.Liability;
+                    billInfo.CreatedBy = _authenticatedUser.UserId;
                     var signatureId = await _context.AgencySignature.Select(x => new { x.Id, x.AgencyCode }).FirstOrDefaultAsync(x => x.AgencyCode == _authenticatedUser.AgencyCode);
                     if (signatureId != null)
                     {
@@ -761,7 +1224,10 @@ namespace PayValueManualSln.Persistence.Repositories
                         {
                             BillInfoId = billInfo.BillId,
                             FieldValue = adInfo.FieldValue,
-                            AdditionalServiceDetailId = adInfo.AdditionalServiceDetailId
+                            AdditionalServiceDetailId = adInfo.AdditionalServiceDetailId,
+                            CreatedBy = _authenticatedUser.UserId,
+                            CreatedOn = DateTime.Now,
+                           
                         };
 
                         additionalBillInfoDetail.Add(obj);
@@ -862,7 +1328,7 @@ namespace PayValueManualSln.Persistence.Repositories
                 var map = new List<MapServiceToTypeRequestDto>();
                 foreach (var item in request)
                 {
-                    var typeName = await _context.Type.Select(x => new { x.Name, x.Id }).FirstOrDefaultAsync(x => x.Id == item.TypeId);
+                    var typeName = await _context.Types.Select(x => new { x.Name, x.Id }).FirstOrDefaultAsync(x => x.Id == item.TypeId);
                     var obj = new MapServiceToTypeRequestDto
                     {
                         TypeId = item.TypeId,
@@ -2967,6 +3433,1274 @@ namespace PayValueManualSln.Persistence.Repositories
                 Log.Error(ex.InnerException == null ? "Error occurred while processing your request" : ex.InnerException.Message);
                 throw ex;
             }
+        }
+        public string GetAllocationHTMLString(List<AssessmentDTO> assessmentDetail, List<BillAdditionalInfoDto> additionalInfo, List<BillDetailsDto> billDetails, string howToPayUrl, string confirmDocUrl)
+        {
+            var howToPayBarcode = howToPayUrl;
+            var confirmDocBarcode = confirmDocUrl;
+            var assigneeName = string.Empty;
+            var propertyLocation = "NOT PROVIDED AT THE ASSESSMENT STAGE";
+            var salutationName = string.Empty;
+            var payerFileNo = string.Empty;
+            var sizeOfLand = string.Empty;
+            var termsofGrant = string.Empty;
+            var sb = new StringBuilder();
+            if (!assessmentDetail.Any())
+            {
+                var sbNoRecord = new StringBuilder();
+                sbNoRecord.Append(@"
+                        <html>
+                            <head>
+                            </head>
+                            <body>
+                                <br><br><br><br><br><br>
+                                <div class='header'><h1>Attention!!!</h1></div>
+                                    <div class='firstheader'>
+                                   No Record to Display. Service does not required a standard letter. If otherwise kindly contact 
+                                    the administrator. Thanks.
+                                    </div>
+                                ");
+
+                sbNoRecord.Append(@"</body>
+                        </html>");
+
+                return sbNoRecord.ToString();
+            }
+            var assessmentDetailFirstDefault = assessmentDetail.FirstOrDefault();
+            var amountInWords = NumberToWordsConverter.ConvertToWords((decimal)billDetails.Sum(x => x.TotalBillAmount));
+            var salutation = assessmentDetailFirstDefault.Name.ToUpper();
+            var payerAddress1 = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(assessmentDetailFirstDefault.Address.ToLower()); //TitleCase
+            var payerstate = assessmentDetailFirstDefault.Location.ToUpper();
+            var telePhone = assessmentDetailFirstDefault.Telephone;
+            var assDate = assessmentDetailFirstDefault.DateSubmitted.ToLongDateString();
+            var grpAssRefNo = assessmentDetailFirstDefault.BaseAssnumber;
+            var paymentCode = assessmentDetailFirstDefault.PaymentCode;
+            var sumOfRebate = billDetails.Sum(x => x.RebateAmount);
+            var sumOfAssAmountFormated = Convert.ToDecimal(Convert.ToDecimal(billDetails.Sum(x => x.BillAmount)).ToString(CultureInfo.InvariantCulture)).ToString("N");
+            var totalSum = Convert.ToDecimal(Convert.ToDecimal(billDetails.Sum(x => x.TotalBillAmount)).ToString(CultureInfo.InvariantCulture)).ToString("N");
+            var sumOfRebateFormated = Convert.ToDecimal(Convert.ToDecimal(billDetails.Sum(x => x.RebateAmount)).ToString(CultureInfo.InvariantCulture)).ToString("N");
+            var firstHeader = "WITHOUT PREJUDICE";
+            var signatoryName = assessmentDetailFirstDefault.SignatoryName;
+            var signatoryPosition = assessmentDetailFirstDefault.SignatoryPosition;
+            var secondSignatoryPosition = "For: Special Adviser/Director General (Lands)";
+            var stateGorvenorsName = assessmentDetailFirstDefault.StateGovernorName;
+            var serviceSubHeader = assessmentDetailFirstDefault.ServiceSubHeader;
+            var serviceHeader = assessmentDetailFirstDefault.ServiceHeader;
+            var typeofUse = assessmentDetailFirstDefault.CategoryName;
+            var rentRevisionPeriod = assessmentDetailFirstDefault.RentRevisionPeriod;
+            var agencyName = assessmentDetailFirstDefault.AgencyName.ToUpperInvariant();
+            var agencyAddress1 = assessmentDetailFirstDefault.AgencyAddress1.ToUpperInvariant();
+            var agencyAddress2 = assessmentDetailFirstDefault.AgencyAddress2.ToUpperInvariant();
+            var agencyLogo = assessmentDetailFirstDefault.AgencyLogo;
+            var agencySignature = assessmentDetailFirstDefault.AgencySignature;
+            var offerShortName = "allocation";
+
+            var assigneeNameInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.AssigneeOrPropertyOwner);
+            var propertyLocationInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.PropertyLocation);
+            var salutationInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.Salutation);
+            var payerFileNos = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.FileNo);
+            var sizeOfLandInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.SizeOfLand);
+            var termsofGrantInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.TermsOfGrant);
+            var payerFieldValue = payerFileNos.FirstOrDefault()?.FieldValue.ObjectToString();
+            if (!string.IsNullOrEmpty(payerFieldValue))
+            {
+                payerFileNo = payerFieldValue;
+            }
+            var assigneeFieldValue = assigneeNameInDb.FirstOrDefault()?.FieldValue.ObjectToString();
+            if (!string.IsNullOrEmpty(assigneeFieldValue))
+            {
+                assigneeName = assigneeFieldValue.ToUpperInvariant();
+            }
+
+            var propertyLocationValue = propertyLocationInDb.FirstOrDefault()?.FieldValue.ObjectToString();
+            if (!string.IsNullOrEmpty(propertyLocationValue))
+            {
+                propertyLocation = propertyLocationValue;
+            }
+
+            var salutationValue = salutationInDb.FirstOrDefault()?.FieldValue.ObjectToString();
+            if (!string.IsNullOrEmpty(salutationValue))
+            {
+
+            }
+            var LandcompulsoryHeader = "OTHER SPECIAL CONDITIONS";
+            var Landcompulsory = $"<div class='thirdheader' style='text-align: justify;'><br /> 2. You are requested to pay the sum of &nbsp;<b>{amountInWords} &nbsp;Only (₦{totalSum}) </b> being the total sum payable on the {offerShortName} as evidence of acceptance of this offer. The said amount is expected to be paid using the Payment Code stated above in this document via any of the following payment channels : <br /> <p><p/>a.)&nbsp;Ogun State Government Approved Bank(s) via eCashier, Remitta, PayDirect Platform. &nbsp;<br/>b.) Online via {_appsettings.PaymentOnlineWebsite}. &nbsp; <br/>c.) POS.</div>";
+            //&nbsp;&nbsp;&nbsp;&nbsp;
+            var LandText = $"3. The allocation is also subject to other implied and express conditions to be stated on the Certificate of Occupancy (that will be issued in evidence of this grant) and the Land Use Act CAP L5 LFN 2004. <br /><br /> 4. That you (applicant) should notify the Bureau upon full payments of your land charges for further processing of your title documents within the possible time frame. <br /><br /> 6. Please note that any payment after the deadline given, you are expected to get in touch with the Bureau, to issue a letter of renewal of offer before any further payment. <br /><br /> 6. You are also requested to please forward the following documents to this office soonest to facilitate issuance of your Certificate of Occupancy after payment of the requisite fees: <br /> <br/> i)&nbsp;&nbsp;Photocopy of all receipts issued for fees demanded above. <br /> ii)&nbsp;&nbsp;You are to obtain and submit duly completed application form for State Land. <br /> iii)&nbsp;&nbsp;Photocopy of Current Tax Clearance of two directors. <br /> iv)&nbsp;&nbsp;Photocopy of Ogun State Development Levy receipts from 2018 to 2021 of two directors. <br/> v)&nbsp;&nbsp;Photocopy of means of identification two (2) directors of the company. <br/> vi)&nbsp;&nbsp;Four (4) passport photograph for two (2) directors on white background. <br/> vii)&nbsp;&nbsp;Board resolution in respect of the subject transaction. <br/> viii)&nbsp;&nbsp;Photocopy of Memorandum and Articles of Association. <br/> ix)&nbsp;&nbsp;Photocopy of Certificate of Incorporation. <br /><br /> 7. Please note that you will be responsible for the payment of compensation for crops enumeration and any other unexhausted improvements on the land if any. <br /><br /> 8. In addition to (7) above, you will also be required to pay a minimum of Two Million Naira (N2,000,000.00) per hectare being gratuitous land compensation depending on the location of the subject property. <br /><br />9.  If the terms and conditions stated above are acceptable to you, please forward a letter of acceptance with evidence of payment receipts/tellers to this office on or before the next (60) days of your receiving this letter, failing which the offer would be deemed to have been rejected or lapsed. <br /><br /> 10. Many thanks.";
+
+            var standardLetterDescriptions = assessmentDetailFirstDefault.StandardLetterDescriptions;
+
+            var secondHeadingWordings = $"{serviceHeader} IN LAND SITUATE, LYING AND BEING AT {propertyLocation.ToUpper()} {payerstate}.";
+
+            var firstBodyWord = $"Refer to the above subject matter, please. <br> <br> I am directed to inform you that <b>{stateGorvenorsName}</b>&nbsp; has graciously considered your request and approved the {serviceSubHeader}";
+
+            var secondBodyWordings = LineBreakers.ShowLineBreaks(Landcompulsory);
+            var remainingBodyWordings = LineBreakers.ShowLineBreaks(standardLetterDescriptions);
+            var firstBodyWords = LineBreakers.ShowLineBreaks(firstBodyWord);
+
+            sb.AppendFormat(@$"<html>
+                            <head>
+                            </head>
+                            <body style='width: 97%'><div style='text-align: left;' class='flex-container'>{payerFileNo}</div>");
+
+            sb.AppendFormat(@$"
+            <table style='border:none;'>
+              <tr style='border:none;'>
+                <td style='border:none; text-align: left;'>&nbsp;&nbsp;&nbsp;&nbsp;<img class='imageLeft' src='{confirmDocBarcode}' alt='{confirmDocBarcode}'/><br><span style='text-align: left;'>Confirm Document</span></td>
+                <td style='border:none; text-align: left;'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img class='imageLeft' src='{agencyLogo}' alt='{agencyLogo}' style='width: 160px; height: 150px'/></td>
+                <td style='border:none; text-align: right;'><img class='imageRight' src='{howToPayBarcode}' alt='{howToPayBarcode}'/><br>
+                <span style='text-align: right;'>How to Pay</span>
+                </td>
+              </tr>
+            </table>
+            ");
+
+            sb.AppendFormat(@$"<div style='text-align: center;'><span style='font-size: larger'><b>{agencyName}</b></span><br>{agencyAddress1}<br>{agencyAddress2}</div><br>");
+            sb.AppendFormat(@$"<div style='text-align: center;'><span style='font-size: xx-large'><b>PAYMENT CODE : {paymentCode}</b></span></div><br>");
+
+
+            if (!string.IsNullOrEmpty(salutationName))
+            {
+                sb.Append(@$"{salutationName} <br>");
+            }
+            if (!string.IsNullOrEmpty(assigneeName))
+            {
+                sb.Append(@$"{assigneeName} <br>");
+                sb.Append(@"C/o");
+            }
+
+            sb.AppendFormat(@"<div class='row'>
+                             <div class='column'> {0}<br> {1}</div>
+                            <div class='column'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+                            <div class='column'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+                            <b><div class='column'>{2} <br> Phone No.: {3}</div></b>
+                        </div>
+                            <div class='firstheader'><h4><q>{4}</q> <br> <span class='secondheader'>{5}</span> </h4></div>
+                            <div class='thirdheader' style='text-align: justify;'>{6}</div> <br>
+                            <div class='row'>
+                            <div class='column'> <b>Terms</b> <br> Type of Use: <br> Size: <br> Terms of Grant: <br> Rent Revision Period <br> <br> <b>FEES</b></div>
+                            <div class='column'>&nbsp;&nbsp; <br> {7} <br> {8} <br> {9} <br> {10}</div>
+                        </div>"
+                            , salutation, payerAddress1, assDate, telePhone, firstHeader, secondHeadingWordings, firstBodyWords, typeofUse, sizeOfLand, termsofGrant, rentRevisionPeriod);
+
+
+
+            if (sumOfRebate > 0)
+            {
+                var rebatePercentage = billDetails.Where(x => x.RebateAmount > 0).Select(x => x.RebatePercentage).FirstOrDefault();
+                var showRebatePercent = string.Empty;
+                bool showRebatePercentStatus = billDetails.Where(x => x.RebateAmount > 0 && x.ShowRebateAmount == false).Any();
+                if (!showRebatePercentStatus)
+                {
+                    showRebatePercent = "%";
+                    sb.AppendFormat(@"
+                              <br> 
+                                <table align='left' style='width: 99%; padding-bottom: 500px;'>
+                                    <thead>
+                                    <tr align='left'>
+                                        <th align='left'>&nbsp;Payment Item(s)</th>
+                                        <th align='right'>Amount (₦)&nbsp;</th>
+                                        <th align='right'>{0}{1} &nbsp;Rebate (₦)&nbsp;</th>  
+                                        <th align='right'>Total (₦)&nbsp;</th>
+                                    </tr>
+                                       </thead>", rebatePercentage, showRebatePercent);
+                }
+                else
+                {
+                    sb.AppendFormat(@"
+                              <br> 
+                                <table align='left' style='width: 99%; padding-bottom: 500px;'>
+                                    <thead>
+                                    <tr align='left'>
+                                        <th align='left'>&nbsp;Payment Item(s)</th>
+                                        <th align='right'>Amount (₦)&nbsp;</th>
+                                        <th align='right'>Rebate (₦)&nbsp;</th>  
+                                        <th align='right'>Total (₦)&nbsp;</th>
+                                    </tr>
+                                       </thead>");
+                }
+
+                foreach (var emp in billDetails)
+                {
+                    sb.AppendFormat(@"<tbody><tr align='left'>
+                                    <td align='left'>&nbsp;{0}</td>
+                                    <td align='right'>&nbsp;{1}&nbsp;</td>
+                                    <td align='right'>&nbsp;{2}&nbsp;</td>
+                                    <td align='right'>&nbsp;{3}&nbsp;</td>
+                                  </tr></tbody>", emp.PaymentItemName, emp.AssesementAmountFormatted, emp.RebateAmountFormatted, emp.AssessmentBalanceFormatted);
+                }
+
+                sb.AppendFormat(@"<tfoot>
+                            <tr align='left'>
+                            <td>Total</td>
+                            <td align='right'>{0}</td>
+                            <td align='right'>{1}</td>
+                            <td align='right'>{2}&nbsp;</td>
+                            </tr></tfoot>", sumOfAssAmountFormated, sumOfRebateFormated, totalSum);
+            }
+            else
+            {
+                sb.Append(@"
+                              <br> 
+                                <table align='left' style='width: 99%; padding-bottom: 500px;'>
+                                    <thead>
+                                    <tr align='left'>
+                                        <th align='left'>&nbsp;Payment Item(s)</th>
+                                        <th align='right'>Amount (₦)&nbsp;</th>
+                                    </tr>
+                                       </thead>");
+
+                foreach (var emp in billDetails)
+                {
+                    sb.AppendFormat(@"<tbody><tr align='left'>
+                                    <td align='left'>&nbsp;{0}</td>
+                                    <td align='right'>&nbsp;{1}&nbsp;</td>
+                                  </tr></tbody>", emp.PaymentItemName, emp.AssessmentBalanceFormatted);
+                }
+
+                sb.AppendFormat(@"<tfoot>
+                            <tr align='left'>
+                            <td>Total</td>
+                            <td align='right'>{0}&nbsp;</td>
+                            </tr></tfoot>", totalSum);
+            }
+
+
+            sb.Append(@"</table>");
+
+            sb.AppendFormat(@"&nbsp;&nbsp;&nbsp;<br><b>{0}</b>", LandcompulsoryHeader);
+
+            sb.AppendFormat(@"{0}<div class='thirdheader' style='text-align: justify;'>{1}<div/><br> <br><br><br><br>", secondBodyWordings, remainingBodyWordings);
+
+            sb.AppendFormat(@"<br><br><div style='text-align: center; padding-top: 10px;'>_____________________________</div>
+                                <p style='text-align: center;'> {0} <br> {1} <br> {2}</p>
+                             </body>
+                            </html>
+                            ", signatoryName, signatoryPosition, secondSignatoryPosition);
+
+            return sb.ToString();
+        }
+        public string GetRevalidationOfLandTitleHTMLString(List<AssessmentDTO> assessmentDetail, List<BillAdditionalInfoDto> additionalInfo, List<BillDetailsDto> billDetails, string howToPayUrl, string confirmDocUrl)
+        {
+            var howToPayBarcode = howToPayUrl;
+            var confirmDocBarcode = confirmDocUrl;
+            var assigneeName = string.Empty;
+            var propertyLocation = "NOT PROVIDED AT THE ASSESSMENT STAGE";
+            var salutationName = string.Empty;
+            var payerFileNo = string.Empty;
+            var sizeOfLand = "1.791 Hectares";
+            var termsofGrant = "92 years";
+            var sb = new StringBuilder();
+            if (!assessmentDetail.Any())
+            {
+                var sbNoRecord = new StringBuilder();
+                sbNoRecord.Append(@"
+                        <html>
+                            <head>
+                            </head>
+                            <body>
+                                <br><br><br><br><br><br>
+                                <div class='header'><h1>Attention!!!</h1></div>
+                                    <div class='firstheader'>
+                                   No Record to Display. Service does not required a standard letter. If otherwise kindly contact 
+                                    the administrator. Thanks.
+                                    </div>
+                                ");
+
+                sbNoRecord.Append(@"</body>
+                        </html>");
+
+                return sbNoRecord.ToString();
+            }
+            var assessmentDetailFirstDefault = assessmentDetail.FirstOrDefault();
+            var amountInWords = NumberToWordsConverter.ConvertToWords((decimal)billDetails.Sum(x => x.TotalBillAmount));
+            //var payerFileNo = "ODD/PL/C.30/94";
+            var salutation = assessmentDetailFirstDefault.Name.ToUpper();
+            var payerAddress1 = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(assessmentDetailFirstDefault.Address.ToLower());
+            var payerstate = assessmentDetailFirstDefault.Location.ToUpper();
+            var telePhone = assessmentDetailFirstDefault.Telephone;
+            var assDate = assessmentDetailFirstDefault.DateSubmitted.ToLongDateString();
+            var grpAssRefNo = assessmentDetailFirstDefault.BaseAssnumber;
+            var paymentCode = assessmentDetailFirstDefault.PaymentCode;
+            var sumOfRebate = billDetails.Sum(x => x.RebateAmount);
+            var sumOfAssAmountFormated = Convert.ToDecimal(Convert.ToDecimal(billDetails.Sum(x => x.BillAmount)).ToString(CultureInfo.InvariantCulture)).ToString("N");
+            var totalSum = Convert.ToDecimal(Convert.ToDecimal(billDetails.Sum(x => x.TotalBillAmount)).ToString(CultureInfo.InvariantCulture)).ToString("N");
+            var sumOfRebateFormated = Convert.ToDecimal(Convert.ToDecimal(billDetails.Sum(x => x.RebateAmount)).ToString(CultureInfo.InvariantCulture)).ToString("N");
+            var firstHeader = "WITHOUT PREJUDICE";
+            var signatoryName = assessmentDetailFirstDefault.SignatoryName;
+            var signatoryPosition = assessmentDetailFirstDefault.SignatoryPosition;
+            var secondSignatoryPosition = "For: Special Adviser/Director General (Lands)";
+            var stateGorvenorsName = assessmentDetailFirstDefault.StateGovernorName;
+            var serviceSubHeader = assessmentDetailFirstDefault.ServiceSubHeader;
+            var serviceHeader = assessmentDetailFirstDefault.ServiceHeader;
+            var typeofUse = assessmentDetailFirstDefault.CategoryName;
+            var rentRevisionPeriod = assessmentDetailFirstDefault.RentRevisionPeriod;
+            var agencyName = assessmentDetailFirstDefault.AgencyName.ToUpperInvariant();
+            var agencyAddress1 = assessmentDetailFirstDefault.AgencyAddress1.ToUpperInvariant();
+            var agencyAddress2 = assessmentDetailFirstDefault.AgencyAddress2.ToUpperInvariant();
+            var agencyLogo = assessmentDetailFirstDefault.AgencyLogo;
+            var agencySignature = assessmentDetailFirstDefault.AgencySignature;
+            var offerShortName = "revalidation";
+            var assigneeNameInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.AssigneeOrPropertyOwner);
+            var propertyLocationInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.PropertyLocation);
+            var salutationInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.Salutation);
+            var payerFileNos = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.FileNo);
+            var sizeOfLandInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.SizeOfLand);
+            var termsofGrantInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.TermsOfGrant);
+            var payerFieldValue = payerFileNos.FirstOrDefault()?.FieldValue.ObjectToString();
+            if (!string.IsNullOrEmpty(payerFieldValue))
+            {
+                payerFileNo = payerFieldValue;
+            }
+            var assigneeFieldValue = assigneeNameInDb.FirstOrDefault()?.FieldValue.ObjectToString();
+            if (!string.IsNullOrEmpty(assigneeFieldValue))
+            {
+                assigneeName = assigneeFieldValue.ToUpperInvariant();
+            }
+
+            var propertyLocationValue = propertyLocationInDb.FirstOrDefault()?.FieldValue.ObjectToString();
+            if (!string.IsNullOrEmpty(propertyLocationValue))
+            {
+                propertyLocation = propertyLocationValue;
+            }
+
+            var salutationValue = salutationInDb.FirstOrDefault()?.FieldValue.ObjectToString();
+            if (!string.IsNullOrEmpty(salutationValue))
+            {
+
+            }
+            var LandcompulsoryHeader = "OTHER SPECIAL CONDITIONS";
+            var Landcompulsory = $"<div style='text-align: justify;'><br /> 2. You are requested to pay the sum of &nbsp;<b>{amountInWords} &nbsp;Only (₦{totalSum}) </b> being the total sum payable on the {offerShortName} as evidence of acceptance of this offer. The said amount is expected to be paid using the Payment Code stated above in this document via any of the following payment channels : <br /> <p><p/>a.)&nbsp;Ogun State Government Approved Bank(s) via eCashier, Remitta, PayDirect Platform. &nbsp;<br/>b.) Online via {_appsettings.PaymentOnlineWebsite}. &nbsp; <br/>c.) POS.</div>";
+            //&nbsp;&nbsp;&nbsp;&nbsp;
+            var LandText = $"3. The offer is also subject to other implied and express conditions to be stated on the Certificate of Occupancy (that will be issued in evidence of this grant) and the Land Use Act CAP L5 LFN 2004. <br /><br /> 4. That you (applicant) should notify the Bureau upon full payments of your land charges for further processing of your title documents within the possible time frame. <br /><br /> 5. Please note that any payment after the deadline given, you are expected to get in touch with the Bureau, to issue a letter of renewal of offer before any further payment. <br /><br /> 6. You are also requested to please forward the following documents to this office soonest to facilitate issuance of your Certificate of Occupancy after payment of the requisite fees: <br /> <br/> i)&nbsp;&nbsp;Photocopy of all receipts issued for fees demanded above. <br /> ii)&nbsp;&nbsp;Photocopy of Current Tax Clearance of two directors of the applicant. <br /> iii)&nbsp;&nbsp;Photocopy of Ogun State Development Levy receipts for 2018 to 2021 of the applicant. <br/> iv) &nbsp;Photocopy of means of identification of the applicant. <br/> v) &nbsp;Four (4) recent passport photograph of the applicant on white background. <br /><br />7. If the terms and conditions stated above are acceptable to you, please forward a letter of acceptance with evidence of payment receipts/tellers to this office on or before the next (60) days of your receiving this letter, failing which the offer would be deemed to have been rejected or lapsed. <br /><br />8. Many thanks.";
+
+            var standardLetterDescriptions = assessmentDetailFirstDefault.StandardLetterDescriptions;
+
+            var secondHeadingWordings = $"{serviceHeader} IN LAND SITUATE, LYING AND BEING AT {propertyLocation.ToUpper()} <br> {payerstate}.";
+
+            var firstBodyWord = $"Refer to the above subject matter, please. <br> <br> I am directed to inform you that <b>{stateGorvenorsName}</b> &nbsp; has graciously considered your request and approved the {serviceSubHeader}";
+
+            var secondBodyWordings = LineBreakers.ShowLineBreaks(Landcompulsory);
+            var remainingBodyWordings = LineBreakers.ShowLineBreaks(standardLetterDescriptions);
+            var firstBodyWords = LineBreakers.ShowLineBreaks(firstBodyWord);
+
+            sb.AppendFormat(@$"<html>
+                            <head>
+                            </head>
+                            <body style='width: 97%'><div style='text-align: left;' class='flex-container'>{payerFileNo}</div>");
+
+            sb.AppendFormat(@$"
+            <table style='border:none;'>
+              <tr style='border:none;'>
+                <td style='border:none; text-align: left;'>&nbsp;&nbsp;&nbsp;&nbsp;<img class='imageLeft' src='{confirmDocBarcode}' alt='{confirmDocBarcode}'/><br><span style='text-align: left;'>Confirm Document</span></td>
+                <td style='border:none; text-align: left;'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img class='imageLeft' src='{agencyLogo}' alt='{agencyLogo}' style='width: 160px; height: 150px'/></td>
+                <td style='border:none; text-align: right;'><img class='imageRight' src='{howToPayBarcode}' alt='{howToPayBarcode}'/><br>
+                <span style='text-align: right;'>How to Pay</span>
+                </td>
+              </tr>
+            </table>
+            ");
+
+            sb.AppendFormat(@$"<div style='text-align: center;'><span style='font-size: larger'><b>{agencyName}</b></span><br>{agencyAddress1}<br>{agencyAddress2}</div><br>");
+            sb.AppendFormat(@$"<div style='text-align: center;'><span style='font-size: xx-large'><b>PAYMENT CODE : {paymentCode}</b></span></div>");
+
+            sb.AppendFormat(@"
+                        <div class='row'>
+                            <div class='column'> {0}<br> {1} <br> {2}</div>
+                            <div class='column'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+                            <div class='column'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+                            <b><div class='column'>{3} <br> Phone No.: {4}</div></b>
+                        </div>
+                            <div class='firstheader'><h4><q>{5}</q> <br> <span class='secondheader'>{6}</span> </h4></div>
+                            <div class='thirdheader' style='text-align: justify;'>{7}</div> <br>
+                            <div class='row'>
+                            <div class='column'> <b>Terms</b> <br> Type of Use: <br> Size: <br> Terms of Grant: <br> Rent Revision Period <br> <br> <b>FEES</b></div>
+                            <div class='column'>&nbsp;&nbsp; <br> {8} <br> {9} <br> {10} <br> {11}</div>
+                        </div>"
+                            , payerFileNo, salutation, payerAddress1, assDate, telePhone, firstHeader, secondHeadingWordings, firstBodyWords, typeofUse, sizeOfLand, termsofGrant, rentRevisionPeriod);
+
+
+            if (sumOfRebate > 0)
+            {
+                var rebatePercentage = billDetails.Where(x => x.RebateAmount > 0).Select(x => x.RebatePercentage).FirstOrDefault();
+
+                var showRebatePercent = string.Empty;
+                bool showRebatePercentStatus = billDetails.Where(x => x.RebateAmount > 0 && x.ShowRebateAmount == false).Any();
+                if (!showRebatePercentStatus)
+                {
+                    showRebatePercent = "%";
+                    sb.AppendFormat(@"
+                              <br> 
+                                <table align='left' style='width: 99%; padding-bottom: 500px;'>
+                                    <thead>
+                                    <tr align='left'>
+                                        <th align='left'>&nbsp;Payment Item(s)</th>
+                                        <th align='right'>Amount (₦)&nbsp;</th>
+                                        <th align='right'>{0}{1} &nbsp;Rebate (₦)&nbsp;</th>  
+                                        <th align='right'>Total (₦)&nbsp;</th>
+                                    </tr>
+                                       </thead>", rebatePercentage, showRebatePercent);
+                }
+                else
+                {
+                    sb.AppendFormat(@"
+                              <br> 
+                                <table align='left' style='width: 99%; padding-bottom: 500px;'>
+                                    <thead>
+                                    <tr align='left'>
+                                        <th align='left'>&nbsp;Payment Item(s)</th>
+                                        <th align='right'>Amount (₦)&nbsp;</th>
+                                        <th align='right'>Rebate (₦)&nbsp;</th>  
+                                        <th align='right'>Total (₦)&nbsp;</th>
+                                    </tr>
+                                       </thead>");
+                }
+
+                foreach (var emp in billDetails)
+                {
+                    sb.AppendFormat(@"<tbody><tr align='left'>
+                                    <td align='left'>&nbsp;{0}</td>
+                                    <td align='right'>&nbsp;{1}&nbsp;</td>
+                                    <td align='right'>&nbsp;{2}&nbsp;</td>
+                                    <td align='right'>&nbsp;{3}&nbsp;</td>
+                                  </tr></tbody>", emp.PaymentItemName, emp.AssesementAmountFormatted, emp.RebateAmountFormatted, emp.AssessmentBalanceFormatted);
+                }
+
+                sb.AppendFormat(@"<tfoot>
+                            <tr align='left'>
+                            <td>Total</td>
+                            <td align='right'>{0}</td>
+                            <td align='right'>{1}</td>
+                            <td align='right'>{2}&nbsp;</td>
+                            </tr></tfoot>", sumOfAssAmountFormated, sumOfRebateFormated, totalSum);
+            }
+            else
+            {
+                sb.Append(@"
+                              <br> 
+                                <table align='left' style='width: 99%; padding-bottom: 500px;'>
+                                    <thead>
+                                    <tr align='left'>
+                                        <th align='left'>&nbsp;Payment Item(s)</th>
+                                        <th align='right'>Amount (₦)&nbsp;</th>
+                                    </tr>
+                                       </thead>");
+
+                foreach (var emp in billDetails)
+                {
+                    sb.AppendFormat(@"<tbody><tr align='left'>
+                                    <td align='left'>&nbsp;{0}</td>
+                                    <td align='right'>&nbsp;{1}&nbsp;</td>
+                                  </tr></tbody>", emp.PaymentItemName, emp.AssessmentBalanceFormatted);
+                }
+
+                sb.AppendFormat(@"<tfoot>
+                            <tr align='left'>
+                            <td>Total</td>
+                            <td align='right'>{0}&nbsp;</td>
+                            </tr></tfoot>", totalSum);
+            }
+
+
+            sb.Append(@"</table>");
+
+            sb.AppendFormat(@"&nbsp;&nbsp;&nbsp;<br><b>{0}</b>", LandcompulsoryHeader);
+
+            sb.AppendFormat(@"{0}<div class='thirdheader' style='text-align: justify;'>{1}<div/><br> <br><br><br><br>", secondBodyWordings, remainingBodyWordings);
+
+            sb.AppendFormat(@"<br><br><div style='text-align: center; padding-top: 10px;'>_____________________________</div>
+                                <p style='text-align: center;'> {0} <br> {1} <br> {2}</p>
+                             </body>
+                            </html>
+                            ", signatoryName, signatoryPosition, secondSignatoryPosition);
+
+            return sb.ToString();
+        }
+        public string GetAccomodationHTMLString(List<AssessmentDTO> assessmentDetail, List<BillAdditionalInfoDto> additionalInfo, List<BillDetailsDto> billDetails, string howToPayUrl, string confirmDocUrl)
+        {
+            var howToPayBarcode = howToPayUrl;
+            var confirmDocBarcode = confirmDocUrl;
+            var assigneeName = string.Empty;
+            var propertyLocation = "NOT PROVIDED AT THE ASSESSMENT STAGE";
+            var salutationName = string.Empty;
+            var payerFileNo = string.Empty;
+            var sizeOfLand = string.Empty;
+            var termsofGrant = string.Empty;
+            var sb = new StringBuilder();
+            if (!assessmentDetail.Any())
+            {
+                var sbNoRecord = new StringBuilder();
+                sbNoRecord.Append(@"
+                        <html>
+                            <head>
+                            </head>
+                            <body>
+                                <br><br><br><br><br><br>
+                                <div class='header'><h1>Attention!!!</h1></div>
+                                    <div class='firstheader'>
+                                   No Record to Display. Service does not required a standard letter. If otherwise kindly contact 
+                                    the administrator. Thanks.
+                                    </div>
+                                ");
+
+                sbNoRecord.Append(@"</body>
+                        </html>");
+
+                return sbNoRecord.ToString();
+            }
+            var assessmentDetailFirstDefault = assessmentDetail.FirstOrDefault();
+            var amountInWords = NumberToWordsConverter.ConvertToWords((decimal)billDetails.Sum(x => x.TotalBillAmount));
+            //var payerFileNo = "ODD/PL/C.30/94";
+            var salutation = assessmentDetailFirstDefault.Name.ToUpper();
+            var payerAddress1 = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(assessmentDetailFirstDefault.Address.ToLower());
+            var payerstate = assessmentDetailFirstDefault.Location.ToUpper();
+            var telePhone = assessmentDetailFirstDefault.Telephone;
+            var assDate = assessmentDetailFirstDefault.DateSubmitted.ToLongDateString();
+            var grpAssRefNo = assessmentDetailFirstDefault.BaseAssnumber;
+            var paymentCode = assessmentDetailFirstDefault.PaymentCode;
+            var sumOfRebate = billDetails.Sum(x => x.RebateAmount);
+            var sumOfAssAmountFormated = Convert.ToDecimal(Convert.ToDecimal(billDetails.Sum(x => x.BillAmount)).ToString(CultureInfo.InvariantCulture)).ToString("N");
+            var totalSum = Convert.ToDecimal(Convert.ToDecimal(billDetails.Sum(x => x.TotalBillAmount)).ToString(CultureInfo.InvariantCulture)).ToString("N");
+            var sumOfRebateFormated = Convert.ToDecimal(Convert.ToDecimal(billDetails.Sum(x => x.RebateAmount)).ToString(CultureInfo.InvariantCulture)).ToString("N");
+            var firstHeader = "WITHOUT PREJUDICE";
+            var signatoryName = assessmentDetailFirstDefault.SignatoryName;
+            var signatoryPosition = assessmentDetailFirstDefault.SignatoryPosition;
+            var agencyName = assessmentDetailFirstDefault.AgencyName.ToUpperInvariant();
+            var agencyAddress1 = assessmentDetailFirstDefault.AgencyAddress1.ToUpperInvariant();
+            var agencyAddress2 = assessmentDetailFirstDefault.AgencyAddress2.ToUpperInvariant();
+            var agencyLogo = assessmentDetailFirstDefault.AgencyLogo;
+            var agencySignature = assessmentDetailFirstDefault.AgencySignature;
+            var secondSignatoryPosition = "For: Special Adviser/Director General (Lands)";
+            var stateGorvenorsName = assessmentDetailFirstDefault.StateGovernorName;
+            var serviceSubHeader = assessmentDetailFirstDefault.ServiceSubHeader;
+            var serviceHeader = assessmentDetailFirstDefault.ServiceHeader;
+            var typeofUse = assessmentDetailFirstDefault.CategoryName;
+            var rentRevisionPeriod = assessmentDetailFirstDefault.RentRevisionPeriod;
+            var offerShortName = "accomodation";
+            var assigneeNameInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.AssigneeOrPropertyOwner);
+            var propertyLocationInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.PropertyLocation);
+            var salutationInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.Salutation);
+            var payerFileNos = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.FileNo);
+            var sizeOfLandInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.SizeOfLand);
+            var termsofGrantInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.TermsOfGrant);
+            var payerFieldValue = payerFileNos.FirstOrDefault()?.FieldValue.ObjectToString();
+            if (!string.IsNullOrEmpty(payerFieldValue))
+            {
+                payerFileNo = payerFieldValue;
+            }
+            var assigneeFieldValue = assigneeNameInDb.FirstOrDefault()?.FieldValue.ObjectToString();
+            if (!string.IsNullOrEmpty(assigneeFieldValue))
+            {
+                assigneeName = assigneeFieldValue.ToUpperInvariant();
+            }
+
+            var propertyLocationValue = propertyLocationInDb.FirstOrDefault()?.FieldValue.ObjectToString();
+            if (!string.IsNullOrEmpty(propertyLocationValue))
+            {
+                propertyLocation = propertyLocationValue;
+            }
+
+            var salutationValue = salutationInDb.FirstOrDefault()?.FieldValue.ObjectToString();
+            if (!string.IsNullOrEmpty(salutationValue))
+            {
+
+            }
+
+            var LandcompulsoryHeader = "OTHER SPECIAL CONDITIONS";
+            var Landcompulsory = $"<div class='thirdheader' style='text-align: justify;'><br /> 2. You are requested to pay the sum of &nbsp;<b>{amountInWords} &nbsp;Only (₦{totalSum}) </b> being the total sum payable on the {offerShortName} as evidence of acceptance of this offer. The said amount is expected to be paid using the Payment Code stated above in this document via any of the following payment channels : <br /> <p><p/>a.)&nbsp;Ogun State Government Approved Bank(s) via eCashier, Remitta, PayDirect Platform. &nbsp;<br/>b.) Online via {_appsettings.PaymentOnlineWebsite}. &nbsp; <br/>c.) POS.</div>";
+            //&nbsp;&nbsp;&nbsp;&nbsp;
+            var LandText = $"3. The offer is also subject to other implied and express conditions to be stated on the Certificate of Occupancy (that will be issued in evidence of this grant) and the Land Use Act CAP L5 LFN 2004. <br /><br /> 4. That you (applicant) should notify the Bureau upon full payments of your land charges for further processing of your title documents within the possible time frame. <br /><br /> 5. Please note that any payment after the deadline given, you are expected to get in touch with the Bureau, to issue a letter of renewal of offer before any further payment. <br /><br /> 6. You are also requested to please forward the following documents to this office soonest to facilitate issuance of your Certificate of Occupancy after payment of the requisite fees: <br /> <br/> i) &nbsp;Photocopy of all receipts issued for fees demanded above. <br /> ii) &nbsp;Photocopy of Current Tax Clearance of two directors. <br /> iii) &nbsp;Photocopy of Ogun State Development Levy receipts for 2018 to 2021 of two directors. <br/> iv) &nbsp;Board resolution in respect of the subject transaction. <br/> v) &nbsp;Photocopy of means of identification for two (2) directors of the company. <br/> vi) &nbsp;Three (3) passport photograph for two (2) directors on white background. <br /><br /> 7. If the terms and conditions stated above are acceptable to you, please forward a letter of acceptance with evidence of payment receipts/tellers to this office on or before the next (60) days of your receiving this letter, failing which the offer would be deemed to have been rejected or lapsed. <br /><br />8. Many thanks.";
+
+            var standardLetterDescriptions = assessmentDetailFirstDefault.StandardLetterDescriptions;
+
+            var secondHeadingWordings = $"{serviceHeader} SITUATE, LYING AND BEING AT {propertyLocation.ToUpper()} {payerstate}.";
+
+            var firstBodyWord = $"Refer to the above subject matter, please. <br> <br> I am directed to inform you that <b>{stateGorvenorsName}</b>&nbsp; has graciously considered your request and approved the {serviceSubHeader}";
+
+            var secondBodyWordings = LineBreakers.ShowLineBreaks(Landcompulsory);
+            var remainingBodyWordings = LineBreakers.ShowLineBreaks(standardLetterDescriptions);
+            var firstBodyWords = LineBreakers.ShowLineBreaks(firstBodyWord);
+
+            sb.AppendFormat(@$"<html>
+                            <head>
+                            </head>
+                            <body style='width: 97%'><div style='text-align: left;' class='flex-container'>{payerFileNo}</div>");
+
+            sb.AppendFormat(@$"
+            <table style='border:none;'>
+              <tr style='border:none;'>
+                <td style='border:none; text-align: left;'>&nbsp;&nbsp;&nbsp;&nbsp;<img class='imageLeft' src='{confirmDocBarcode}' alt='{confirmDocBarcode}'/><br><span style='text-align: left;'>Confirm Document</span></td>
+                <td style='border:none; text-align: left;'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img class='imageLeft' src='{agencyLogo}' alt='{agencyLogo}' style='width: 160px; height: 150px'/></td>
+                <td style='border:none; text-align: right;'><img class='imageRight' src='{howToPayBarcode}' alt='{howToPayBarcode}'/><br>
+                <span style='text-align: right;'>How to Pay</span>
+                </td>
+              </tr>
+            </table>
+            ");
+
+            sb.AppendFormat(@$"<div style='text-align: center;'><span style='font-size: larger'><b>{agencyName}</b></span><br>{agencyAddress1}<br>{agencyAddress2}</div><br>");
+            sb.AppendFormat(@$"<div style='text-align: center;'><span style='font-size: xx-large'><b>PAYMENT CODE : {paymentCode}</b></span></div><br>");
+
+
+            if (!string.IsNullOrEmpty(salutationName))
+            {
+                sb.Append(@$"{salutationName} <br>");
+            }
+
+            if (!string.IsNullOrEmpty(assigneeName))
+            {
+                sb.Append(@$"{assigneeName} <br>");
+                sb.Append(@"C/o");
+            }
+
+            sb.AppendFormat(@"
+                        <div class='row'>
+                            <div class='column'> {0}<br> {1}</div>
+                            <div class='column'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+                            <div class='column'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+                            <b><div class='column'>{2} <br> Phone No.: {3}</div></b>
+                        </div>
+                            <div class='firstheader'><h4><q>{4}</q> <br> <span class='secondheader'>{5}</span> </h4></div>
+                            <div class='thirdheader' style='text-align: justify;'>{6}</div> <br>
+                            <div class='row'>
+                            <div class='column'> <b>Terms</b> <br> Type of Use: <br> Size: <br> Terms of Grant: <br> Rent Revision Period <br> <br> <b>FEES</b></div>
+                            <div class='column'>&nbsp;&nbsp; <br> {7} <br> {8} <br> {9} <br> {10}</div>
+                        </div>"
+                            , salutation, payerAddress1, assDate, telePhone, firstHeader, secondHeadingWordings, firstBodyWords, typeofUse, sizeOfLand, termsofGrant, rentRevisionPeriod);
+
+            if (sumOfRebate > 0)
+            {
+                var rebatePercentage = billDetails.Where(x => x.RebateAmount > 0).Select(x => x.RebatePercentage).FirstOrDefault();
+                var showRebatePercent = string.Empty;
+                bool showRebatePercentStatus = billDetails.Where(x => x.RebateAmount > 0 && x.ShowRebateAmount == false).Any();
+                if (!showRebatePercentStatus)
+                {
+                    showRebatePercent = "%";
+                    sb.AppendFormat(@"
+                              <br> 
+                                <table align='left' style='width: 99%; padding-bottom: 500px;'>
+                                    <thead>
+                                    <tr align='left'>
+                                        <th align='left'>&nbsp;Payment Item(s)</th>
+                                        <th align='right'>Amount (₦)&nbsp;</th>
+                                        <th align='right'>{0}{1} &nbsp;Rebate (₦)&nbsp;</th>  
+                                        <th align='right'>Total (₦)&nbsp;</th>
+                                    </tr>
+                                       </thead>", rebatePercentage, showRebatePercent);
+                }
+                else
+                {
+                    sb.AppendFormat(@"
+                              <br> 
+                                <table align='left' style='width: 99%; padding-bottom: 500px;'>
+                                    <thead>
+                                    <tr align='left'>
+                                        <th align='left'>&nbsp;Payment Item(s)</th>
+                                        <th align='right'>Amount (₦)&nbsp;</th>
+                                        <th align='right'>Rebate (₦)&nbsp;</th>  
+                                        <th align='right'>Total (₦)&nbsp;</th>
+                                    </tr>
+                                       </thead>");
+                }
+
+                foreach (var emp in billDetails)
+                {
+                    sb.AppendFormat(@"<tbody><tr align='left'>
+                                    <td align='left'>&nbsp;{0}</td>
+                                    <td align='right'>&nbsp;{1}&nbsp;</td>
+                                    <td align='right'>&nbsp;{2}&nbsp;</td>
+                                    <td align='right'>&nbsp;{3}&nbsp;</td>
+                                  </tr></tbody>", emp.PaymentItemName, emp.AssesementAmountFormatted, emp.RebateAmountFormatted, emp.AssessmentBalanceFormatted);
+                }
+
+                sb.AppendFormat(@"<tfoot>
+                            <tr align='left'>
+                            <td>Total</td>
+                            <td align='right'>{0}</td>
+                            <td align='right'>{1}</td>
+                            <td align='right'>{2}&nbsp;</td>
+                            </tr></tfoot>", sumOfAssAmountFormated, sumOfRebateFormated, totalSum);
+            }
+            else
+            {
+                sb.Append(@"
+                              <br> 
+                                <table align='left' style='width: 99%; padding-bottom: 500px;'>
+                                    <thead>
+                                    <tr align='left'>
+                                        <th align='left'>&nbsp;Payment Item(s)</th>
+                                        <th align='right'>Amount (₦)&nbsp;</th>
+                                    </tr>
+                                       </thead>");
+
+                foreach (var emp in billDetails)
+                {
+                    sb.AppendFormat(@"<tbody><tr align='left'>
+                                    <td align='left'>&nbsp;{0}</td>
+                                    <td align='right'>&nbsp;{1}&nbsp;</td>
+                                  </tr></tbody>", emp.PaymentItemName, emp.AssessmentBalanceFormatted);
+                }
+
+                sb.AppendFormat(@"<tfoot>
+                            <tr align='left'>
+                            <td>Total</td>
+                            <td align='right'>{0}&nbsp;</td>
+                            </tr></tfoot>", totalSum);
+            }
+
+            sb.Append(@"</table>");
+
+            sb.AppendFormat(@"&nbsp;&nbsp;&nbsp;<br><b>{0}</b>", LandcompulsoryHeader);
+
+            sb.AppendFormat(@"{0}<div class='thirdheader' style='text-align: justify;'>{1}<div/><br> <br><br><br><br>", secondBodyWordings, remainingBodyWordings);
+
+            sb.AppendFormat(@"<br><br><div style='text-align: center; padding-top: 10px;'>_____________________________</div>
+                                <p style='text-align: center;'> {0} <br> {1} <br> {2}</p>
+                             </body>
+                            </html>
+                            ", signatoryName, signatoryPosition, secondSignatoryPosition);
+
+
+            return sb.ToString();
+        }
+        public string GetRatificationOfLandTitleHTMLString(List<AssessmentDTO> assessmentDetail, List<BillAdditionalInfoDto> additionalInfo, List<BillDetailsDto> billDetails, string howToPayUrl, string confirmDocUrl)
+        {
+            var howToPayBarcode = howToPayUrl;
+            var confirmDocBarcode = confirmDocUrl;
+            var assigneeName = string.Empty;
+            var propertyLocation = "NOT PROVIDED AT THE ASSESSMENT STAGE";
+            var salutationName = string.Empty;
+            var payerFileNo = string.Empty;
+            var sizeOfLand = string.Empty;
+            var termsofGrant = string.Empty;
+            var sb = new StringBuilder();
+            if (!assessmentDetail.Any())
+            {
+                var sbNoRecord = new StringBuilder();
+                sbNoRecord.Append(@"
+                        <html>
+                            <head>
+                            </head>
+                            <body>
+                                <br><br><br><br><br><br>
+                                <div class='header'><h1>Attention!!!</h1></div>
+                                    <div class='firstheader'>
+                                   No Record to Display. Service does not required a standard letter. If otherwise kindly contact 
+                                    the administrator. Thanks.
+                                    </div>
+                                ");
+
+                sbNoRecord.Append(@"</body>
+                        </html>");
+
+                return sbNoRecord.ToString();
+            }
+            var assessmentDetailFirstDefault = assessmentDetail.FirstOrDefault();
+            var amountInWords = NumberToWordsConverter.ConvertToWords((decimal)billDetails.Sum(x => x.TotalBillAmount));
+            //var payerFileNo = "ODD/PL/C.30/94";
+            var salutation = assessmentDetailFirstDefault.Name.ToUpper();
+            var payerAddress1 = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(assessmentDetailFirstDefault.Address.ToLower());
+            var payerstate = assessmentDetailFirstDefault.Location.ToUpper();
+            var telePhone = assessmentDetailFirstDefault.Telephone;
+            var assDate = assessmentDetailFirstDefault.DateSubmitted.ToLongDateString();
+            var grpAssRefNo = assessmentDetailFirstDefault.BaseAssnumber;
+            var paymentCode = assessmentDetailFirstDefault.PaymentCode;
+            var sumOfRebate = billDetails.Sum(x => x.RebateAmount);
+            var sumOfAssAmountFormated = Convert.ToDecimal(Convert.ToDecimal(billDetails.Sum(x => x.BillAmount)).ToString(CultureInfo.InvariantCulture)).ToString("N");
+            var totalSum = Convert.ToDecimal(Convert.ToDecimal(billDetails.Sum(x => x.TotalBillAmount)).ToString(CultureInfo.InvariantCulture)).ToString("N");
+            var sumOfRebateFormated = Convert.ToDecimal(Convert.ToDecimal(billDetails.Sum(x => x.RebateAmount)).ToString(CultureInfo.InvariantCulture)).ToString("N");
+            var firstHeader = "WITHOUT PREJUDICE";
+            var signatoryName = assessmentDetailFirstDefault.SignatoryName;
+            var signatoryPosition = assessmentDetailFirstDefault.SignatoryPosition;
+            var secondSignatoryPosition = "For: Special Adviser/Director General (Lands)";
+            var stateGorvenorsName = assessmentDetailFirstDefault.StateGovernorName;
+            var serviceSubHeader = assessmentDetailFirstDefault.ServiceSubHeader;
+            var serviceHeader = assessmentDetailFirstDefault.ServiceHeader;
+            var typeofUse = assessmentDetailFirstDefault.CategoryName;
+            var rentRevisionPeriod = assessmentDetailFirstDefault.RentRevisionPeriod;
+            var agencyName = assessmentDetailFirstDefault.AgencyName.ToUpperInvariant();
+            var agencyAddress1 = assessmentDetailFirstDefault.AgencyAddress1.ToUpperInvariant();
+            var agencyAddress2 = assessmentDetailFirstDefault.AgencyAddress2.ToUpperInvariant();
+            var agencyLogo = assessmentDetailFirstDefault.AgencyLogo;
+            var agencySignature = assessmentDetailFirstDefault.AgencySignature;
+            var offerShortName = "ratification";
+            var assigneeNameInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.AssigneeOrPropertyOwner);
+            var propertyLocationInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.PropertyLocation);
+            var salutationInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.Salutation);
+            var payerFileNos = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.FileNo);
+            var sizeOfLandInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.SizeOfLand);
+            var termsofGrantInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.TermsOfGrant);
+            var payerFieldValue = payerFileNos.FirstOrDefault()?.FieldValue.ObjectToString();
+            if (!string.IsNullOrEmpty(payerFieldValue))
+            {
+                payerFileNo = payerFieldValue;
+            }
+            var assigneeFieldValue = assigneeNameInDb.FirstOrDefault()?.FieldValue.ObjectToString();
+            if (!string.IsNullOrEmpty(assigneeFieldValue))
+            {
+                assigneeName = assigneeFieldValue.ToUpperInvariant();
+            }
+
+            var propertyLocationValue = propertyLocationInDb.FirstOrDefault()?.FieldValue.ObjectToString();
+            if (!string.IsNullOrEmpty(propertyLocationValue))
+            {
+                propertyLocation = propertyLocationValue;
+            }
+
+            var salutationValue = salutationInDb.FirstOrDefault()?.FieldValue.ObjectToString();
+            if (!string.IsNullOrEmpty(salutationValue))
+            {
+
+            }
+            var LandcompulsoryHeader = "OTHER SPECIAL CONDITIONS";
+            var Landcompulsory = $"<div class='thirdheader' style='text-align: justify;'><br /> 2. You are requested to pay the sum of &nbsp;<b>{amountInWords} &nbsp;Only (₦{totalSum}) </b> being the total sum payable on the {offerShortName} as evidence of acceptance of this offer. The said amount is expected to be paid using the Payment Code stated above in this document via any of the following payment channels : <br /> <p><p/>a.)&nbsp;Ogun State Government Approved Bank(s) via eCashier, Remitta, PayDirect Platform. &nbsp;<br/>b.) Online via {_appsettings.PaymentOnlineWebsite}. &nbsp; <br/>c.) POS.</div>";
+            //&nbsp;&nbsp;&nbsp;&nbsp;
+            var LandText = $"3. The offer is also subject to other implied and express conditions to be stated on the Certificate of Occupancy (that will be issued in evidence of this grant) and the Land Use Act CAP L5 LFN 2004. <br /><br /> 4. That you (applicant) should notify the Bureau upon full payments of your land charges for further processing of your title documents within the possible time frame. <br /><br /> 5. Please note that any payment after the deadline given, you are expected to get in touch with the Bureau, to issue a letter of renewal of offer before any further payment. <br /><br /> 6. Please note further that this approval is predicated on the assumption that all the documents you presented are with genuine proof of ownership and that all information you supplied us is/are correct.  <br /><br /> 7. The consideration of your request for ratification is without prejudice to pre-existing transactions entered into by you for which you remain solely responsible. <br /><br /> 8.  If the terms and conditions stated above are acceptable to you, please forward a letter of acceptance with evidence of payment receipts/tellers to this office on or before the next (60) days of your receiving this letter, failing which the offer would be deemed to have been rejected or lapsed. <br /><br />9. Many thanks.";
+
+            var standardLetterDescriptions = assessmentDetailFirstDefault.StandardLetterDescriptions;
+
+            var secondHeadingWordings = $"{serviceHeader} IN LAND SITUATE, LYING AND BEING AT {propertyLocation.ToUpper()} {payerstate}.";
+
+            var firstBodyWord = $"Refer to the above subject matter, please. <br> <br> I am directed to inform you that <b>{stateGorvenorsName}</b> &nbsp;has graciously considered your request and approved the {serviceSubHeader}";
+
+            var secondBodyWordings = LineBreakers.ShowLineBreaks(Landcompulsory);
+            var remainingBodyWordings = LineBreakers.ShowLineBreaks(standardLetterDescriptions);
+            var firstBodyWords = LineBreakers.ShowLineBreaks(firstBodyWord);
+
+            sb.AppendFormat(@$"<html>
+                            <head>
+                            </head>
+                            <body style='width: 97%'><div style='text-align: left;' class='flex-container'>{payerFileNo}</div>");
+
+            sb.AppendFormat(@$"
+            <table style='border:none;'>
+              <tr style='border:none;'>
+                <td style='border:none; text-align: left;'>&nbsp;&nbsp;&nbsp;&nbsp;<img class='imageLeft' src='{confirmDocBarcode}' alt='{confirmDocBarcode}'/><br><span style='text-align: left;'>Confirm Document</span></td>
+                <td style='border:none; text-align: left;'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img class='imageLeft' src='{agencyLogo}' alt='{agencyLogo}' style='width: 160px; height: 150px'/></td>
+                <td style='border:none; text-align: right;'><img class='imageRight' src='{howToPayBarcode}' alt='{howToPayBarcode}'/><br>
+                <span style='text-align: right;'>How to Pay</span>
+                </td>
+              </tr>
+            </table>
+            ");
+
+            sb.AppendFormat(@$"<div style='text-align: center;'><span style='font-size: larger'><b>{agencyName}</b></span><br>{agencyAddress1}<br>{agencyAddress2}</div><br>");
+            sb.AppendFormat(@$"<div style='text-align: center;'><span style='font-size: xx-large'><b>PAYMENT CODE : {paymentCode}</b></span></div>");
+
+
+            if (!string.IsNullOrEmpty(salutationName))
+            {
+                sb.Append(@$"{salutationName} <br>");
+            }
+
+            if (!string.IsNullOrEmpty(assigneeName))
+            {
+                sb.Append(@$"{assigneeName} <br>");
+                sb.Append(@"C/o");
+            }
+            sb.AppendFormat(@"<br><div class='row'>
+                            <div class='column'> {0}<br> {1} </div>
+                            <div class='column'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+                            <div class='column'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+                            <b><div class='column'>{2} <br> Phone No.: {3}</div></b>
+                        </div>
+                            <div class='firstheader'><h4><q>{4}</q> <br> <span class='secondheader'>{5}</span> </h4></div>
+                            <div class='thirdheader' style='text-align: justify;'>{6}</div> <br>
+                            <div class='row'>
+                            <div class='column'> <b>Terms</b> <br> Type of Use: <br> Size: <br> Terms of Grant: <br> Rent Revision Period <br> <br> <b>FEES</b></div>
+                            <div class='column'>&nbsp;&nbsp; <br> {7} <br> {8} <br> {9} <br> {10}</div>
+                        </div>"
+                            , salutation, payerAddress1, assDate, telePhone, firstHeader, secondHeadingWordings, firstBodyWords, typeofUse, sizeOfLand, termsofGrant, rentRevisionPeriod);
+
+
+            if (sumOfRebate > 0)
+            {
+                var rebatePercentage = billDetails.Where(x => x.RebateAmount > 0).Select(x => x.RebatePercentage).FirstOrDefault();
+
+                var showRebatePercent = string.Empty;
+                bool showRebatePercentStatus = billDetails.Where(x => x.RebateAmount > 0 && x.ShowRebateAmount == false).Any();
+                if (!showRebatePercentStatus)
+                {
+                    showRebatePercent = "%";
+                    sb.AppendFormat(@"
+                              <br> 
+                                <table align='left' style='width: 99%; padding-bottom: 500px;'>
+                                    <thead>
+                                    <tr align='left'>
+                                        <th align='left'>&nbsp;Payment Item(s)</th>
+                                        <th align='right'>Amount (₦)&nbsp;</th>
+                                        <th align='right'>{0}{1} &nbsp;Rebate (₦)&nbsp;</th>  
+                                        <th align='right'>Total (₦)&nbsp;</th>
+                                    </tr>
+                                       </thead>", rebatePercentage, showRebatePercent);
+                }
+                else
+                {
+                    sb.AppendFormat(@"
+                              <br> 
+                                <table align='left' style='width: 99%; padding-bottom: 500px;'>
+                                    <thead>
+                                    <tr align='left'>
+                                        <th align='left'>&nbsp;Payment Item(s)</th>
+                                        <th align='right'>Amount (₦)&nbsp;</th>
+                                        <th align='right'>Rebate (₦)&nbsp;</th>  
+                                        <th align='right'>Total (₦)&nbsp;</th>
+                                    </tr>
+                                       </thead>");
+                }
+
+                foreach (var emp in billDetails)
+                {
+                    sb.AppendFormat(@"<tbody><tr align='left'>
+                                    <td align='left'>&nbsp;{0}</td>
+                                    <td align='right'>&nbsp;{1}&nbsp;</td>
+                                    <td align='right'>&nbsp;{2}&nbsp;</td>
+                                    <td align='right'>&nbsp;{3}&nbsp;</td>
+                                  </tr></tbody>", emp.PaymentItemName, emp.AssesementAmountFormatted, emp.RebateAmountFormatted, emp.AssessmentBalanceFormatted);
+                }
+
+                sb.AppendFormat(@"<tfoot>
+                            <tr align='left'>
+                            <td>Total</td>
+                            <td align='right'>{0}</td>
+                            <td align='right'>{1}</td>
+                            <td align='right'>{2}&nbsp;</td>
+                            </tr></tfoot>", sumOfAssAmountFormated, sumOfRebateFormated, totalSum);
+            }
+            else
+            {
+                sb.Append(@"
+                              <br> 
+                                <table align='left' style='width: 99%; padding-bottom: 500px;'>
+                                    <thead>
+                                    <tr align='left'>
+                                        <th align='left'>&nbsp;Payment Item(s)</th>
+                                        <th align='right'>Amount (₦)&nbsp;</th>
+                                    </tr>
+                                       </thead>");
+
+                foreach (var emp in billDetails)
+                {
+                    sb.AppendFormat(@"<tbody><tr align='left'>
+                                    <td align='left'>&nbsp;{0}</td>
+                                    <td align='right'>&nbsp;{1}&nbsp;</td>
+                                  </tr></tbody>", emp.PaymentItemName, emp.AssessmentBalanceFormatted);
+                }
+
+                sb.AppendFormat(@"<tfoot>
+                            <tr align='left'>
+                            <td>Total</td>
+                            <td align='right'>{0}&nbsp;</td>
+                            </tr></tfoot>", totalSum);
+            }
+
+
+            sb.Append(@"</table>");
+
+            sb.AppendFormat(@"&nbsp;&nbsp;&nbsp;<br><b>{0}</b>", LandcompulsoryHeader);
+            sb.AppendFormat(@"{0}<div class='thirdheader' style='text-align: justify;'>{1}<div/><br> <br><br><br><br>", secondBodyWordings, remainingBodyWordings);
+
+            sb.AppendFormat(@"<br><br><div style='text-align: center; padding-top: 10px;'>_____________________________</div>
+                                <p style='text-align: center;'> {0} <br> {1} <br> {2}</p>
+                             </body>
+                            </html>
+                            ", signatoryName, signatoryPosition, secondSignatoryPosition);
+
+
+            return sb.ToString();
+        }
+        public string GetCertificateOfOccupancyHTMLString(List<AssessmentDTO> assessmentDetail, List<BillAdditionalInfoDto> additionalInfo, List<BillDetailsDto> billDetails, string howToPayUrl, string confirmDocUrl)
+        {
+            var howToPayBarcode = howToPayUrl;
+            var confirmDocBarcode = confirmDocUrl;
+            var assigneeName = string.Empty;
+            var propertyLocation = "NOT PROVIDED AT THE ASSESSMENT STAGE";
+            var salutationName = string.Empty;
+            var payerFileNo = string.Empty;
+            var sizeOfLand = string.Empty;
+            var termsofGrant = string.Empty;
+            var sb = new StringBuilder();
+            if (!assessmentDetail.Any())
+            {
+                var sbNoRecord = new StringBuilder();
+                sbNoRecord.Append(@"
+                        <html>
+                            <head>
+                            </head>
+                            <body>
+                                <br><br><br><br><br><br>
+                                <div class='header'><h1>Attention!!!</h1></div>
+                                    <div class='firstheader'>
+                                   No Record to Display. Service does not required a standard letter. If otherwise kindly contact 
+                                    the administrator. Thanks.
+                                    </div>
+                                ");
+
+                sbNoRecord.Append(@"</body>
+                        </html>");
+
+                return sbNoRecord.ToString();
+            }
+            var assessmentDetailFirstDefault = assessmentDetail.FirstOrDefault();
+            var amountInWords = NumberToWordsConverter.ConvertToWords((decimal)billDetails.Sum(x => x.TotalBillAmount));
+            var salutation = assessmentDetailFirstDefault.Name.ToUpper();
+            var payerAddress1 = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(assessmentDetailFirstDefault.Address.ToLower()); //TitleCase
+            var payerstate = assessmentDetailFirstDefault.Location.ToUpper();
+            var telePhone = assessmentDetailFirstDefault.Telephone;
+            var assDate = assessmentDetailFirstDefault.DateSubmitted.ToLongDateString();
+            var grpAssRefNo = assessmentDetailFirstDefault.BaseAssnumber;
+            var paymentCode = assessmentDetailFirstDefault.PaymentCode;
+            var sumOfRebate = billDetails.Sum(x => x.RebateAmount);
+            var sumOfAssAmountFormated = Convert.ToDecimal(Convert.ToDecimal(billDetails.Sum(x => x.BillAmount)).ToString(CultureInfo.InvariantCulture)).ToString("N");
+            var totalSum = Convert.ToDecimal(Convert.ToDecimal(billDetails.Sum(x => x.TotalBillAmount)).ToString(CultureInfo.InvariantCulture)).ToString("N");
+            var sumOfRebateFormated = Convert.ToDecimal(Convert.ToDecimal(billDetails.Sum(x => x.RebateAmount)).ToString(CultureInfo.InvariantCulture)).ToString("N");
+            var firstHeader = "WITHOUT PREJUDICE";
+            var signatoryName = assessmentDetailFirstDefault.SignatoryName;
+            var signatoryPosition = assessmentDetailFirstDefault.SignatoryPosition;
+            var secondSignatoryPosition = "For: Special Adviser/Director General (Lands)";
+            var stateGorvenorsName = assessmentDetailFirstDefault.StateGovernorName;
+            var serviceSubHeader = assessmentDetailFirstDefault.ServiceSubHeader;
+            var serviceHeader = assessmentDetailFirstDefault.ServiceHeader;
+            var typeofUse = assessmentDetailFirstDefault.CategoryName;
+            var rentRevisionPeriod = assessmentDetailFirstDefault.RentRevisionPeriod;
+            var agencyName = assessmentDetailFirstDefault.AgencyName.ToUpperInvariant();
+            var agencyAddress1 = assessmentDetailFirstDefault.AgencyAddress1.ToUpperInvariant();
+            var agencyAddress2 = assessmentDetailFirstDefault.AgencyAddress2.ToUpperInvariant();
+            var agencyLogo = assessmentDetailFirstDefault.AgencyLogo;
+            var agencySignature = assessmentDetailFirstDefault.AgencySignature;
+            //var offerShortName = "the certificate";
+            var assigneeNameInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.AssigneeOrPropertyOwner);
+            var propertyLocationInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.PropertyLocation);
+            var salutationInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.Salutation);
+            var payerFileNos = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.FileNo);
+            var sizeOfLandInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.SizeOfLand);
+            var termsofGrantInDb = BillHelper.GetAdditionalInfoByField(additionalInfo, AdditionalServiceDetailDefinitions.TermsOfGrant);
+            var payerFieldValue = payerFileNos.FirstOrDefault()?.FieldValue.ObjectToString();
+            if (!string.IsNullOrEmpty(payerFieldValue))
+            {
+                payerFileNo = payerFieldValue;
+            }
+            var assigneeFieldValue = assigneeNameInDb.FirstOrDefault()?.FieldValue.ObjectToString();
+            if (!string.IsNullOrEmpty(assigneeFieldValue))
+            {
+                assigneeName = assigneeFieldValue.ToUpperInvariant();
+            }
+
+            var propertyLocationValue = propertyLocationInDb.FirstOrDefault()?.FieldValue.ObjectToString();
+            if (!string.IsNullOrEmpty(propertyLocationValue))
+            {
+                propertyLocation = propertyLocationValue;
+            }
+
+            var salutationValue = salutationInDb.FirstOrDefault()?.FieldValue.ObjectToString();
+            if (!string.IsNullOrEmpty(salutationValue))
+            {
+
+            }
+            var LandcompulsoryHeader = "OTHER SPECIAL CONDITIONS";
+            var Landcompulsory = $"<div class='thirdheader' style='text-align: justify;'><br /> 1. You are requested to pay the sum of &nbsp;<b>{amountInWords} &nbsp;Only (₦{totalSum}) </b> being the total sum payable as evidence of acceptance of this offer. The said amount is expected to be paid using the Payment Code stated above in this document via any of the following payment channels : <br /> <p><p/>a.)&nbsp;Ogun State Government Approved Bank(s) via eCashier, Remitta, PayDirect Platform. &nbsp;<br/>b.) Online via {_appsettings.PaymentOnlineWebsite}. &nbsp; <br/>c.) POS.</div>";
+
+            var standardLetterDescriptions = assessmentDetailFirstDefault.StandardLetterDescriptions;
+
+            var secondHeadingWordings = $"{serviceHeader} SITUATE, LYING AND BEING AT {propertyLocation.ToUpper()} {payerstate}.";
+
+            var firstBodyWord = $"Refer to the above subject matter, please. <br> <br> I am directed to inform you that <b>{stateGorvenorsName}</b>&nbsp; has graciously considered your request and approved the {serviceSubHeader}";
+
+            var secondBodyWordings = LineBreakers.ShowLineBreaks(Landcompulsory);
+            var remainingBodyWordings = LineBreakers.ShowLineBreaks(standardLetterDescriptions);
+            var firstBodyWords = LineBreakers.ShowLineBreaks(firstBodyWord);
+
+            sb.AppendFormat(@$"<html>
+                            <head>
+                            </head>
+                            <body style='width: 97%'><div style='text-align: left;' class='flex-container'>{payerFileNo}</div>");
+
+            sb.AppendFormat(@$"
+            <table style='border:none;'>
+              <tr style='border:none;'>
+                <td style='border:none; text-align: left;'>&nbsp;&nbsp;&nbsp;&nbsp;<img class='imageLeft' src='{confirmDocBarcode}' alt='{confirmDocBarcode}'/><br><span style='text-align: left;'>Confirm Document</span></td>
+                <td style='border:none; text-align: left;'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img class='imageLeft' src='{agencyLogo}' alt='{agencyLogo}' style='width: 160px; height: 150px'/></td>
+                <td style='border:none; text-align: right;'><img class='imageRight' src='{howToPayBarcode}' alt='{howToPayBarcode}'/><br>
+                <span style='text-align: right;'>How to Pay</span>
+                </td>
+              </tr>
+            </table>
+            ");
+
+            sb.AppendFormat(@$"<div style='text-align: center;'><span style='font-size: larger'><b>{agencyName}</b></span><br>{agencyAddress1}<br>{agencyAddress2}</div><br>");
+            sb.AppendFormat(@$"<div style='text-align: center;'><span style='font-size: xx-large'><b>PAYMENT CODE : {paymentCode}</b></span></div><br>");
+
+
+            if (!string.IsNullOrEmpty(salutationName))
+            {
+                sb.Append(@$"{salutationName} <br>");
+            }
+            if (!string.IsNullOrEmpty(assigneeName))
+            {
+                sb.Append(@$"{assigneeName} <br>");
+                sb.Append(@"C/o");
+            }
+
+            sb.AppendFormat(@"<div class='row'>
+                             <div class='column'> {0}<br> {1}</div>
+                            <div class='column'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+                            <div class='column'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+                            <b><div class='column'>{2} <br> Phone No.: {3}</div></b>
+                        </div>
+                            <div class='firstheader'><h4><q>{4}</q> <br> <span class='secondheader'>{5}</span> </h4></div>
+                            <div class='thirdheader' style='text-align: justify;'>{6}</div> <br>
+                            <div class='row'>
+                            <div class='column'> <b>Terms</b> <br> Type of Use: <br> Size: <br> Terms of Grant: <br> Rent Revision Period <br> <br> <b>FEES</b></div>
+                            <div class='column'>&nbsp;&nbsp; <br> {7} <br> {8} <br> {9} <br> {10}</div>
+                        </div>"
+                            , salutation, payerAddress1, assDate, telePhone, firstHeader, secondHeadingWordings, firstBodyWords, typeofUse, sizeOfLand, termsofGrant, rentRevisionPeriod);
+
+            if (sumOfRebate > 0)
+            {
+                var rebatePercentage = billDetails.Where(x => x.RebateAmount > 0).Select(x => x.RebatePercentage).FirstOrDefault();
+                var showRebatePercent = string.Empty;
+                bool showRebatePercentStatus = billDetails.Where(x => x.RebateAmount > 0 && x.ShowRebateAmount == false).Any();
+                if (!showRebatePercentStatus)
+                {
+                    showRebatePercent = "%";
+                    sb.AppendFormat(@"
+                              <br> 
+                                <table align='left' style='width: 99%; padding-bottom: 500px;'>
+                                    <thead>
+                                    <tr align='left'>
+                                        <th align='left'>&nbsp;Payment Item(s)</th>
+                                        <th align='right'>Amount (₦)&nbsp;</th>
+                                        <th align='right'>{0}{1} &nbsp;Rebate (₦)&nbsp;</th>  
+                                        <th align='right'>Total (₦)&nbsp;</th>
+                                    </tr>
+                                       </thead>", rebatePercentage, showRebatePercent);
+                }
+                else
+                {
+                    sb.AppendFormat(@"
+                              <br> 
+                                <table align='left' style='width: 99%; padding-bottom: 500px;'>
+                                    <thead>
+                                    <tr align='left'>
+                                        <th align='left'>&nbsp;Payment Item(s)</th>
+                                        <th align='right'>Amount (₦)&nbsp;</th>
+                                        <th align='right'>Rebate (₦)&nbsp;</th>  
+                                        <th align='right'>Total (₦)&nbsp;</th>
+                                    </tr>
+                                       </thead>");
+                }
+
+                foreach (var emp in billDetails)
+                {
+                    sb.AppendFormat(@"<tbody><tr align='left'>
+                                    <td align='left'>&nbsp;{0}</td>
+                                    <td align='right'>&nbsp;{1}&nbsp;</td>
+                                    <td align='right'>&nbsp;{2}&nbsp;</td>
+                                    <td align='right'>&nbsp;{3}&nbsp;</td>
+                                  </tr></tbody>", emp.PaymentItemName, emp.AssesementAmountFormatted, emp.RebateAmountFormatted, emp.AssessmentBalanceFormatted);
+                }
+
+                sb.AppendFormat(@"<tfoot>
+                            <tr align='left'>
+                            <td>Total</td>
+                            <td align='right'>{0}</td>
+                            <td align='right'>{1}</td>
+                            <td align='right'>{2}&nbsp;</td>
+                            </tr></tfoot>", sumOfAssAmountFormated, sumOfRebateFormated, totalSum);
+            }
+            else
+            {
+                sb.Append(@"
+                              <br> 
+                                <table align='left' style='width: 99%; padding-bottom: 500px;'>
+                                    <thead>
+                                    <tr align='left'>
+                                        <th align='left'>&nbsp;Payment Item(s)</th>
+                                        <th align='right'>Amount (₦)&nbsp;</th>
+                                    </tr>
+                                       </thead>");
+
+                foreach (var emp in billDetails)
+                {
+                    sb.AppendFormat(@"<tbody><tr align='left'>
+                                    <td align='left'>&nbsp;{0}</td>
+                                    <td align='right'>&nbsp;{1}&nbsp;</td>
+                                  </tr></tbody>", emp.PaymentItemName, emp.AssessmentBalanceFormatted);
+                }
+
+                sb.AppendFormat(@"<tfoot>
+                            <tr align='left'>
+                            <td>Total</td>
+                            <td align='right'>{0}&nbsp;</td>
+                            </tr></tfoot>", totalSum);
+            }
+
+
+            sb.Append(@"</table>");
+
+            sb.AppendFormat(@"&nbsp;&nbsp;&nbsp;<br><b>{0}</b>", LandcompulsoryHeader);
+
+            sb.AppendFormat(@"{0}<div class='thirdheader' style='text-align: justify;'>{1}<div/><br> <br><br><br><br>", secondBodyWordings, remainingBodyWordings);
+
+            sb.AppendFormat(@"<br><br><div style='text-align: center; padding-top: 10px;'>_____________________________</div>
+                                <p style='text-align: center;'> {0} <br> {1} <br> {2}</p>
+                             </body>
+                            </html>
+                            ", signatoryName, signatoryPosition, secondSignatoryPosition);
+
+            return sb.ToString();
+        }
+        public async Task<List<AssessmentList>> GetAllApprovedAssessmentsAsync(DataSourceLoadOptions loadOptions, string agencyCode)
+        {
+            var dbparams = new DynamicParameters();
+            dbparams.Add("@AgencyCode", agencyCode, DbType.String);
+
+            var result = await Task.FromResult(_dapper.GetAll<AssessmentList>($"[dbo].[LoadDetailsAllAssessment]", dbparams, commandType: CommandType.StoredProcedure, _appsettings.DefaultConnection));
+
+            return result.ToList();
+        }
+        public async Task<Response<List<AdditionalServiceDetailDto>>> GetAllAdditionalServiceDetailName()
+        {
+            var response = new Response<List<AdditionalServiceDetailDto>>();
+            var request = await _context.AdditionalServiceDetail.ToListAsync();
+            response.Message = "Sucessful";
+            response.Succeeded = true;
+            return response;
+        }
+        public string GetPaymentInstructionHTMLStringAsync()
+        {
+            var assigneeName = string.Empty;
+            var sb = new StringBuilder();
+
+            var firstHeader = "HOW TO PAY";
+            var secondParagraph = "You can pay via any of the following payment channels:";
+            var paymentChannels = $"You can pay via any of the following payment channels: <p></p> 1.&nbsp;{CultureInfo.CurrentCulture.TextInfo.ToTitleCase(_appsettings.StateName.ToLowerInvariant())} Government approved banks using the e-cashier, remita and paydirect &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;payment platforms.<br />2.&nbsp;&nbsp;Online or web payment using this url: <b>{_appsettings.PaymentOnlineWebsite}.</b> <br /> 3.&nbsp;&nbsp;POS at point of Service.<br /><br /> Please find below the steps involved in processing your payment through the above mentioned payment channels: <br />";
+
+            var signatoryName = "";
+            var signatoryPosition = "";
+            var secondSignatoryPosition = "";
+
+            var LandcompulsoryHeader = "OTHER SPECIAL CONDITIONS";
+            var LandText = $"<br />1. {CultureInfo.CurrentCulture.TextInfo.ToTitleCase(_appsettings.StateName.ToLowerInvariant())} Government approved banks using the e-cashier, remita and paydirect payment platforms: <br><br> <b>STEPS:</b><br><br> (a) Complete the customized government revenue holding account deposit slip for payment stating clearly the <b>PAYMENT CODE</b> on top of the deposit slip.<br><br>(b) Give the completed deposit slip and the assessment or demand notice to the bank teller. <br><br> (c) Insist that the payment should only be processed using e-cashier or remita or paydirect payment platforms. Direct lodgment into the government revenue holding account is <b>NOT allowed.</b><br><br> (d) Provide answers to the questions asked by the bank teller. <br><br> (e) Hand over your cash or cheque to the bank teller. <br><br>	(f)	Insist and demand for your e-ticket after processing the payment through any of the above three (3) mentioned payment platforms. <br><br> (g) Take a copy of your bank acknowledged deposit slip with e-ticket to the agency to collect the government official revenue receipt. <br><br>2. Online or web payment using this url: <b>{_appsettings.PaymentOnlineWebsite}:</b> <br><br> <b>STEPS:</b><br><br> (a) Log on to {_appsettings.PaymentOnlineWebsite} <br><br>	(b)	Input the <b>PAYMENT CODE</b> on the assessment or demand notice in the space provided. <br><br>	(c)	Click <b>“Get details”</b> to see the assessment or demand notice raised. <br><br>	(d)	Complete the payer’s details i.e first name, last name, email address and telephone number.<br><br> (e) Input the amount you want to pay in the space provided. <br><br> (f) Select the payment methods either by bank transfer or ATM card.<br><br> (g) Click <b>“make payment”</b>. <br><br> (h) Complete the bank account details or ATM card details as requested to the end of the transaction. <br><br> (i) Print the payment acknowledgement receipt and check your email box for a permanent copy of the payment acknowledgement receipt.<br><br> (j) Take a copy of your payment acknowledgement receipt to the agency to collect the government official revenue receipt.<br><br> 3. POS at Point of Service. <br><br> <b>STEPS:</b><br><br> (a) Give the assessment or demand notice to the MDA POS revenue officer. <br><br> (b) Provide answers to the questions asked by the MDA POS revenue officer. <br><br> (c) Hand over your ATM card to the MDA POS revenue officer. <br><br> (d) Insist and demand for your e-ticket after processing the payment. <br><br> (e) Remember to collect your ATM card and demand notice from the MDA POS revenue officer. <br><br> (f) Take a copy of your POS acknowledged deposit slip with e-ticket to the agency to collect official government revenue receipt.";
+
+            var secondBodyWordings = LineBreakers.ShowLineBreaks(LandText);
+            sb.AppendFormat(@"<html>
+                            <head>
+                            </head>
+                            <body style='width: 97%;'>
+                            <div class='firstheader'><h4 style='font-size: xx-large;'><q>{0}</q></h4></div>"
+                            , firstHeader);
+
+            sb.AppendFormat(@"<div style='text-align: justify; font-size: x-large;'>&nbsp;&nbsp;&nbsp;<br>{0}</div>", paymentChannels);
+
+            sb.AppendFormat(@"<div style='text-align: justify; font-size: x-large;'>{0}<br><br></div>
+                                <div style='text-align: center font-size: x-large;; padding-top: 10px;'><br><br></div>
+                                <p style='text-align: center; font-size: x-large;'> {1} <br> {2}</p>
+                                </div>
+                            </body>
+                            </html>", secondBodyWordings, signatoryPosition, secondSignatoryPosition);
+
+            return sb.ToString();
         }
     }
 }

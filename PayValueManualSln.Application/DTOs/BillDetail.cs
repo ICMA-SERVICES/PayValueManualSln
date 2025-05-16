@@ -17,7 +17,7 @@ namespace PayValueManualSln.Application.DTOs
         public string TypeName { get; set; }
         public long? ZoneId { get; set; }
         public string ZoneName { get; set; }
-        public long? LocationId { get; set; }
+        public int? LocationId { get; set; }
         public string LocationName { get; set; }
         public string PaymentItemName { get; set; }
         public decimal BillAmount { get; set; }

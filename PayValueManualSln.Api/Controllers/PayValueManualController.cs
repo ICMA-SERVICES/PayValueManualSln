@@ -1,4 +1,5 @@
-﻿using DevExtreme.AspNet.Data;
+﻿using Dapper;
+using DevExtreme.AspNet.Data;
 using DinkToPdf;
 using DinkToPdf.Contracts;
 using Microsoft.AspNetCore.Authorization;
@@ -18,13 +19,14 @@ using PayValueManualSln.Domain.Entities.Settings;
 using Polly.Utilities;
 using Serilog;
 using System;
+using System.Data;
 using System.Xml.Linq;
 
 namespace PayValueManualSln.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    //[Authorize]
     public class PayValueManualController : ControllerBase
     {
         private readonly IEntityManager _entityManager;
@@ -585,7 +587,7 @@ namespace PayValueManualSln.Api.Controllers
                 };
 
                 file = await _entityManager.ToPdf(pdfConverterRequest);
-                //var pdfFilePath = await _repo.ConvertWithPlayWrightPdfUtilityAsync(pdfConverterRequest);
+                //var pdfFilePath = await _entityManager.ConvertWithPlayWrightPdfUtilityAsync(pdfConverterRequest);
 
                 ////Set the Content-Disposition header so as to display on the browser
                 Response.Headers.Append("Content-Disposition", $"inline; filename={sentDocumentTitle}.pdf");
@@ -612,6 +614,264 @@ namespace PayValueManualSln.Api.Controllers
                 Log.Error($"An Exception Error as occurred in an Application Url ({nameof(OpenGeneratedAssessmentPdfDocumentOnBrowser)}) with the following details : - ");
             }
             return File("", "application/pdf");
+        }
+        [HttpGet("standardAssessmentLetter")]
+        [AllowAnonymous]
+        public async Task<IActionResult> OpenGeneratedPdfDocumentOnBrowser()
+        {
+            byte[] file;
+            try
+            {
+                //Call in this way 
+                //http://localhost/PayValueWebApiCore/api/Payvalue/standardAssessmentLetter?&T0dTUz4zN=UFZPRzIxMEFBMDMx  //Non Standard letter Sample
+                //http://localhost/PayValueWebApiCore/api/Payvalue/standardAssessmentLetter?&T0dTUz4zN=UFZPRzIxOVpaQkJG  //Accomodation Sample
+                //http://localhost/PayValueWebApiCore/api/Payvalue/standardAssessmentLetter?&T0dTUz4zN=UFZPRzIxMUxMQjE2  //Allocation Sample
+                //http://localhost/PayValueWebApiCore/api/Payvalue/standardAssessmentLetter?&T0dTUz4zN=UFZPRzIxMEFBMUJC  //Ratification Sample
+                //http://localhost/PayValueWebApiCore/api/Payvalue/standardAssessmentLetter?&T0dTUz4zN=UFZPRzIxMldXMzI1  //Governor's Consent Sample
+
+                //http://localhost/PayValueWebApiCore/api/Payvalue/standardAssessmentLetter?&T0dTUz4zN=UFZPRzIyMFBQOTY2
+                //http://localhost/PayValueWebApiCore/api/Payvalue/standardAssessmentLetter?&T0dTUz4zN=UFZPRzIyN1JSODRG
+
+
+                //var encodedString = AppWebExtension.Base64UrlEncode("PVOG236BB6AA");
+                //var decodedString = AppWebExtension.Base64UrlDecode(encodedString);
+
+                var confirmBarcode = string.Empty;
+                var howToPayBarcode = string.Empty;
+                string assessmentRefNo = HttpContext.Request.Query["T0dTUz4zN"];
+                var decodedStringAssRefNo = AppWebExtension.Base64UrlDecode(assessmentRefNo.ObjectToString());
+                HttpContext.Session.SetString("T0dTUz4zN", decodedStringAssRefNo.ObjectToString());
+
+                confirmBarcode = $"{_appSettings.ServiceBaseUrl}/api/Payvalue/standardAssessmentLetter?&T0dTUz4zN={assessmentRefNo}";
+                howToPayBarcode = $"{_appSettings.ServiceBaseUrl}/api/Payvalue/paymentInstructions";
+
+                //For ReadMe documentation see https://code-maze.com/create-pdf-dotnetcore/
+                var sentPowerByHeaders = HttpContext.Request.Headers["powerBy"].ToString();
+                var sentdocumentTitleHeaders = HttpContext.Request.Headers["documentTitle"].ToString();
+                var senturlHeaders = HttpContext.Request.Headers["url"].ToString();
+                var sentmerchantCodeHeaders = HttpContext.Request.Headers["merchantCode"].ToString();
+                var sentserviceIdHeaders = HttpContext.Request.Headers["serviceId"].ToString();
+                var sentserviceHeadingHeaders = HttpContext.Request.Headers["serviceHeading"].ToString();
+                var sentPowerByHeadersDesirialized = JsonConvert.DeserializeObject<string>(sentPowerByHeaders);
+                var sentdocumentTitleHeadersDesirialized = JsonConvert.DeserializeObject<string>(sentdocumentTitleHeaders);
+                var senturlHeadersDesirialized = JsonConvert.DeserializeObject<string>(senturlHeaders);
+                var sentmerchantCodeHeadersDesirialized = JsonConvert.DeserializeObject<string>(sentmerchantCodeHeaders);
+                var sentserviceIdHeadersDesirialized = JsonConvert.DeserializeObject<string>(sentserviceIdHeaders);
+                var sentserviceHeadingDesirialized = JsonConvert.DeserializeObject<string>(sentserviceHeadingHeaders);
+
+                var sentDocumentTitle = "PDF Report";
+
+                var globalSettings = new GlobalSettings
+                {
+                    ColorMode = ColorMode.Color,
+                    Orientation = Orientation.Portrait,
+                    PaperSize = PaperKind.A4,
+                    Margins = new MarginSettings { Top = 8 },
+                    DocumentTitle = sentDocumentTitle,
+                };
+
+                var assessmentDetail = new List<AssessmentDTO>();
+                var additionalInfo = new List<BillAdditionalInfoDto>();
+                var billDetails = new List<BillDetailsDto>();
+                assessmentDetail = await _entityManager.GetAllAssessmentDetails(decodedStringAssRefNo).ConfigureAwait(false);
+                var resultTemplate = string.Empty;
+                if (assessmentDetail.Any())
+                {
+                    var billGuid = assessmentDetail.FirstOrDefault().BillInfoGuid;
+                    additionalInfo = await _entityManager.GetAllAdditionalInfo(billGuid);
+                    billDetails = await _entityManager.GetBillDetail(billGuid);
+
+                    //var confirmDocUrl = await _entityManager.GenerateConfirmDocBarcode(barCodeRequest);
+                    var confirmDocUrl = await _entityManager.GenerateConfirmDocBarcode(confirmBarcode);
+                    var howToPayUrl = await _entityManager.GenerateBarcode(howToPayBarcode);
+
+                    confirmDocUrl = string.IsNullOrEmpty(confirmDocUrl) || string.IsNullOrWhiteSpace(confirmDocUrl) ? howToPayUrl : confirmDocUrl;
+
+                    var assessmentDetailFirstDefault = assessmentDetail.FirstOrDefault();
+                    if (assessmentDetailFirstDefault.ServiceId == _appSettings.PaymentForGovernorsConsentOnDeedOfAssignment) //Payment for Governor's Consent on Deed of Assignment
+                    {
+                        resultTemplate = _entityManager.GetGovernorConsentHTMLString(assessmentDetail, additionalInfo, billDetails, howToPayUrl, confirmDocUrl);
+                    }
+                    else if (assessmentDetailFirstDefault.ServiceId == _appSettings.PaymentForLandAllocation) //Payment for Land Allocation
+                    {
+                        resultTemplate = _entityManager.GetAllocationHTMLString(assessmentDetail, additionalInfo, billDetails, howToPayUrl, confirmDocUrl);
+                    }
+                    else if (assessmentDetailFirstDefault.ServiceId == _appSettings.PaymentForStateLandRevalidationOnTitle1 || assessmentDetailFirstDefault.ServiceId == _appSettings.PaymentForStateLandRevalidationOnTitle2) //Payment for State Land Revalidation on Title
+                    {
+                        resultTemplate = _entityManager.GetRevalidationOfLandTitleHTMLString(assessmentDetail, additionalInfo, billDetails, howToPayUrl, confirmDocUrl);
+                    }
+                    else if (assessmentDetailFirstDefault.ServiceId == _appSettings.PaymentForLandAccommodation) //Payment for Land Accommodation
+                    {
+                        resultTemplate = _entityManager.GetAccomodationHTMLString(assessmentDetail, additionalInfo, billDetails, howToPayUrl, confirmDocUrl);
+                    }
+                    else if (assessmentDetailFirstDefault.ServiceId == _appSettings.PaymentForRatification)  //PAYMENT FOR RATIFICATION
+                    {
+                        resultTemplate = _entityManager.GetRatificationOfLandTitleHTMLString(assessmentDetail, additionalInfo, billDetails, howToPayUrl, confirmDocUrl);
+                    }
+                    else if (assessmentDetailFirstDefault.ServiceId == _appSettings.PaymentForCertificateOfOccupancy)  //PAYMENT FOR C Of O
+                    {
+                        resultTemplate = _entityManager.GetCertificateOfOccupancyHTMLString(assessmentDetail, additionalInfo, billDetails, howToPayUrl, confirmDocUrl);
+                    }
+                    else
+                    {
+                        resultTemplate = _entityManager.EmptyPdf();
+                    }
+
+                }
+                else
+                {
+                    resultTemplate = _entityManager.EmptyPdf();
+                }
+
+                var objectSettings = new ObjectSettings
+                {
+                    PagesCount = true,
+                    HtmlContent = resultTemplate, // TemplateGenerator.GetHTMLString(),//USE THIS PROPERTY TO GENERATE PDF CONTENT FROM AN HTML PAGE
+                    //Page = sentUrl, //USE THIS PROPERTY TO GENERATE PDF CONTENT FROM FROM A SENT URL PAGE
+                    WebSettings = { DefaultEncoding = "utf-8", UserStyleSheet = Path.Combine(Directory.GetCurrentDirectory(), "assets", "styles.css"), EnableJavascript = true, enablePlugins = true },
+                    //WebSettings = { DefaultEncoding = "utf-8", EnableJavascript = true, enablePlugins = true },
+                    HeaderSettings = { FontName = "Arial", FontSize = 9, Right = "[page] of [toPage]", Line = false },
+                    //HeaderSettings = { FontName = "Arial", FontSize = 9, Right = "Page [page] of [toPage]", Line = true },
+                    //FooterSettings = { FontName = "Arial", FontSize = 9, Line = true, Center = sentPowerBy /*"Report Footer"*/ }
+                };
+
+                var pdf = new HtmlToPdfDocument()
+                {
+                    GlobalSettings = globalSettings,
+                    Objects = { objectSettings }
+                };
+
+                file = _converter.Convert(pdf);  //Showing a PDF Document in a Browser //IF WE dont USE Out PROPERTY IN THE GlobalSettings CLASS, THIS IS ENOUGH FOR CONVERSION
+                return File(file, "application/pdf");  //Showing a PDF Document in a Browser  //Note to use both Enabling Download Mode and Showing a PDF Document in a Browser, you must comment Out in globalSettings above.
+
+            }
+
+            catch (Exception ex)
+            {
+
+                Log.Error($"An Exception Error as occurred in an Application Url ({nameof(OpenGeneratedPdfDocumentOnBrowser)}) with the following details : - ");
+            }
+            return File("", "application/pdf");
+        }
+        [HttpGet("GetAllApprovedAssessments")]
+        public async Task<IActionResult> GetAllApprovedAssessmentsAsync(DataSourceLoadOptions loadOptions, string agencyCode)
+        {
+            var dbparams = new DynamicParameters();
+            dbparams.Add("@AgencyCode", agencyCode, DbType.String);
+
+            var result = await _entityManager.GetAllApprovedAssessmentsAsync(loadOptions, agencyCode);
+
+            if (result.Any())
+            {
+                loadOptions.PrimaryKey = new[] { "AssessementRefNo" };
+                return Ok(DataSourceLoader.Load(result.OrderByDescending(x => x.PayerName), loadOptions));
+            }
+
+            loadOptions.PrimaryKey = new[] { "AssessementRefNo" };
+            var dataLoad = DataSourceLoader.Load(new List<AssessmentList>(), loadOptions);
+            return Ok(dataLoad);
+        }
+        [HttpGet("GetAllAdditionalInfo")]
+        public async Task<IActionResult> GetAllAdditionalInfo(DataSourceLoadOptions loadOptions, Guid billInfoGuid)
+        {
+            var result = await _entityManager.GetAdditionalInfoByBillInfoId(billInfoGuid);
+
+            if (result.Any())
+            {
+                loadOptions.PrimaryKey = new[] { "AdditionalInfoId" };
+                return Ok(DataSourceLoader.Load(result.OrderByDescending(x => x.AdditionalInfoId), loadOptions));
+            }
+
+            loadOptions.PrimaryKey = new[] { "AdditionalInfoId" };
+            var dataLoad = DataSourceLoader.Load(new List<BillAdditionalInfo>(), loadOptions);
+            return Ok(dataLoad);
+        }
+        [HttpGet("GetAllAdditionalServiceDetailName")]
+        public async Task<IActionResult> GetAllAdditionalServiceDetailName(DataSourceLoadOptions loadOptions)
+        {
+            var result = await _entityManager.GetAllAdditionalServiceDetailName();
+
+            if (result.Data.Any())
+            {
+                loadOptions.PrimaryKey = new[] { "Id" };
+                return Ok(DataSourceLoader.Load(result.Data.OrderByDescending(x => x.Id), loadOptions));
+            }
+
+            loadOptions.PrimaryKey = new[] { "Id" };
+            var dataLoad = DataSourceLoader.Load(new List<BillAdditionalInfo>(), loadOptions);
+            return Ok(dataLoad);
+        }
+        [HttpGet("paymentInstructions")]
+        [AllowAnonymous]
+        public async Task<IActionResult> OpenpaymentInstructionsPdfDocumentOnBrowser()
+        {
+            var resultTemplate = string.Empty;
+            byte[] file;
+            try
+            {
+                var sentPowerByHeaders = HttpContext.Request.Headers["powerBy"].ToString();
+                var sentdocumentTitleHeaders = HttpContext.Request.Headers["documentTitle"].ToString();
+                var senturlHeaders = HttpContext.Request.Headers["url"].ToString();
+                var sentmerchantCodeHeaders = HttpContext.Request.Headers["merchantCode"].ToString();
+                var sentserviceIdHeaders = HttpContext.Request.Headers["serviceId"].ToString();
+                var sentserviceHeadingHeaders = HttpContext.Request.Headers["serviceHeading"].ToString();
+                var sentPowerByHeadersDesirialized = JsonConvert.DeserializeObject<string>(sentPowerByHeaders);
+                var sentdocumentTitleHeadersDesirialized = JsonConvert.DeserializeObject<string>(sentdocumentTitleHeaders);
+                var senturlHeadersDesirialized = JsonConvert.DeserializeObject<string>(senturlHeaders);
+                var sentmerchantCodeHeadersDesirialized = JsonConvert.DeserializeObject<string>(sentmerchantCodeHeaders);
+                var sentserviceIdHeadersDesirialized = JsonConvert.DeserializeObject<string>(sentserviceIdHeaders);
+                var sentserviceHeadingDesirialized = JsonConvert.DeserializeObject<string>(sentserviceHeadingHeaders);
+
+                var sentDocumentTitle = "PDF Report"; // sentdocumentTitleHeadersDesirialized;
+                var sentPowerBy = "Powered By" + " " + " " + "http://icmaservices.com"; //sentPowerByHeaders
+                var sentUrl = "https://payment.deltabir.com/";
+
+                var globalSettings = new GlobalSettings
+                {
+                    ColorMode = ColorMode.Color,
+                    Orientation = Orientation.Portrait,
+                    PaperSize = PaperKind.A4,
+                    Margins = new MarginSettings { Top = 10 },
+                    DocumentTitle = sentDocumentTitle,
+                };
+
+                resultTemplate = _entityManager.GetPaymentInstructionHTMLStringAsync();
+
+                var objectSettings = new ObjectSettings
+                {
+                    PagesCount = true,
+                    HtmlContent = resultTemplate, // TemplateGenerator.GetHTMLString(),//USE THIS PROPERTY TO GENERATE PDF CONTENT FROM AN HTML PAGE
+                    //Page = sentUrl, //USE THIS PROPERTY TO GENERATE PDF CONTENT FROM FROM A SENT URL PAGE
+                    WebSettings = { DefaultEncoding = "utf-8", UserStyleSheet = Path.Combine(Directory.GetCurrentDirectory(), "assets", "styles.css"), EnableJavascript = true, enablePlugins = true },
+                    //HeaderSettings = { FontName = "Arial", FontSize = 9, Right = "Page [page] of [toPage]", Line = true },
+                    //FooterSettings = { FontName = "Arial", FontSize = 9, Line = true, Center = sentPowerBy /*"Report Footer"*/ }
+                };
+
+                var pdf = new HtmlToPdfDocument()
+                {
+                    GlobalSettings = globalSettings,
+                    Objects = { objectSettings }
+                };
+
+                file = _converter.Convert(pdf);  //Showing a PDF Document in a Browser //IF WE dont USE Out PROPERTY IN THE GlobalSettings CLASS, THIS IS ENOUGH FOR CONVERSION
+                return File(file, "application/pdf");  //Showing a PDF Document in a Browser  //Note to use both Enabling Download Mode and Showing a PDF Document in a Browser, you must comment Out in globalSettings above.
+
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"An Exception Error as occurred in an Application Url ({nameof(OpenpaymentInstructionsPdfDocumentOnBrowser)}) with the following details : ");
+            }
+            return File("", "application/pdf");
+        }
+        [HttpPost("UpdateBillAdditionalInfo")]
+        public async Task<IActionResult> UpdateBillAdditionalInfo([FromBody] List<UpdateBillAdditionalInfoRequestDto> request)
+        {
+            if(ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            var response = await _entityManager.UpdateBillAdditionalInfo(request);
+            return Ok(response);
         }
 
     }

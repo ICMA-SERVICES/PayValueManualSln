@@ -28,7 +28,7 @@ namespace PayValueManualSln.Domain.Entities.Settings
         public DateTime? DeletedOn { get; set; }
         public string DeletedBy { get; set; }
         public long? ServiceRevenueId { get; set; }
-        public string Formular { get; set; }
+        public string Formular { get; set; }    
 
         public virtual Agency AgencyCodeNavigation { get; set; }
         public virtual ICollection<ServiceRevenue> ServiceRevenue { get; set; }

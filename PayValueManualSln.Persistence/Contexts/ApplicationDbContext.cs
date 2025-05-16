@@ -57,7 +57,7 @@ namespace PayValueManualSln.Infrastructure.Persistence.Contexts
         public virtual DbSet<ServiceDetails> ServiceDetails { get; set; }
         public virtual DbSet<ServiceMethod> ServiceMethod { get; set; }
         public virtual DbSet<ServiceRevenue> ServiceRevenue { get; set; }
-        public virtual DbSet<Types> Type { get; set; }
+        public virtual DbSet<Types> Types { get; set; }
         public virtual DbSet<UserDepartment> UserDepartment { get; set; }
         public virtual DbSet<Zone> Zone { get; set; }
         public virtual DbSet<Input> Input { get; set; }

@@ -11,7 +11,7 @@ public class Agency : BaseEntity
         Services = new HashSet<Services>();
     }
 
-    public string Code { get; set; } 
+    public string Code { get; set; }                                                                                                                                            
     public int Id { get; set; }  
     public string MerchantCode { get; set; }
     public string Name { get; set; }

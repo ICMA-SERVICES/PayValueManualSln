@@ -8,7 +8,6 @@ namespace PayValueManualSln.Application.DTOs
 {
     public class MapServiceToTypeRequestDto 
     {
-        public long Id { get; set; }
         public long TypeId { get; set; }
         public string TypeName { get; set; }
         public long ServiceId { get; set; }

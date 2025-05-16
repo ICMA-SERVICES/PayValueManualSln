@@ -55,7 +55,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DeletedBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("DeletedOn")
@@ -109,7 +108,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<string>("UpdatedBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Code", "Id");
@@ -386,7 +384,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DeletedBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("DeletedOn")
@@ -403,7 +400,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("AdditionalInfoId");
@@ -431,7 +427,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DeletedBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("DeletedOn")
@@ -458,7 +453,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UpdatedBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -489,30 +483,25 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("address")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("address1")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("address2")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("businessTypeId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int?>("businessTypeId")
+                        .HasColumnType("int");
 
                     b.Property<string>("cacNumber")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("classOfEmployeeId")
+                    b.Property<int?>("classOfEmployeeId")
                         .HasColumnType("int");
 
                     b.Property<string>("classOfEmployeeName")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("contactName")
@@ -520,15 +509,12 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("contactPersonEmail")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("contentType")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("courtesyTitle")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("dateCreated")
@@ -542,11 +528,9 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("employeeName")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("fileName")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("firstName")
@@ -554,11 +538,9 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("fullPayerName")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("genderType")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("isParent")
@@ -575,11 +557,9 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("lgaName")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("merchantCode")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("otherName")
@@ -587,7 +567,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("payerCategory")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("payerName")
@@ -599,27 +578,21 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("phoneNo")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("phoneNo1")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("phoneNo2")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("phoneNo3")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("photograph")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("regTypeCode")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("revenueOfficeID")
@@ -627,31 +600,24 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("revenueOfficeName")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("signature")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("staffNumber")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("surname")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("taxAgentReferenceNumber")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("taxPayerReferenceNumber")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("telephoneNumber")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("townID")
@@ -1005,7 +971,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DeletedBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("DeletedOn")
@@ -1024,7 +989,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<string>("UpdatedBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -1059,7 +1023,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DeletedBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("DeletedOn")
@@ -1076,7 +1039,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UpdatedBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -1106,7 +1068,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DeletedBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("DeletedOn")
@@ -1123,7 +1084,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -1151,7 +1111,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DeletedBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("DeletedOn")
@@ -1173,7 +1132,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<string>("UpdatedBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -1183,6 +1141,30 @@ namespace PayValueManualSln.Persistence.Migrations
                     b.HasIndex("ServicesId");
 
                     b.ToTable("InputDefinitionMapping", "Setting");
+                });
+
+            modelBuilder.Entity("PayValueManualSln.Domain.Entities.Settings.LetterFormat", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+
+                    b.Property<string>("AgencyCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("HeaderName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsAddressIncluded")
+                        .HasColumnType("bit");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("LetterFormat", "Setting");
                 });
 
             modelBuilder.Entity("PayValueManualSln.Domain.Entities.Settings.Location", b =>
@@ -1259,7 +1241,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DeletedBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("DeletedOn")
@@ -1276,7 +1257,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ValidatorId")
@@ -1702,7 +1682,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DeletedBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("DeletedOn")
@@ -1730,7 +1709,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("decimal(18,6)");
 
                     b.Property<string>("UpdatedBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -1902,7 +1880,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DeletedBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("DeletedOn")
@@ -1925,7 +1902,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<string>("UpdatedBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -2239,7 +2215,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DeletedBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("DeletedOn")
@@ -2264,7 +2239,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<string>("UpdatedBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -2451,7 +2425,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PreviousBaseNumber")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PreviousItemPaymentCode")
@@ -2572,7 +2545,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DeletedBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("DeletedOn")
@@ -2687,7 +2659,6 @@ namespace PayValueManualSln.Persistence.Migrations
                         .HasColumnType("decimal(18,6)");
 
                     b.Property<string>("UpdatedBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UpdatedById")
